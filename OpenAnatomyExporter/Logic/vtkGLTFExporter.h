@@ -20,6 +20,9 @@ class vtkActor;
 #ifndef __vtkGLTFExporter_h
 #define __vtkGLTFExporter_h
 
+// TinyGltf
+#include "ThirdParty/tiny_gltf.h"
+
 // Slicer includes
 #include "vtkSlicerModuleLogic.h"
 
@@ -27,46 +30,32 @@ class vtkActor;
 
 // STD includes
 #include <cstdlib>
+
 #include "vtkIOExportModule.h" // For export macro
 #include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h"
 #include "vtkExporter.h"
 
-class VTKIOEXPORT_EXPORT vtkGLTFExporter : public vtkExporter 
+class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFExporter : public vtkExporter
 {
 public:
   static vtkGLTFExporter *New();
   vtkTypeMacro(vtkGLTFExporter, vtkExporter);
 
-  //@{
-  /**
-  * Specify the prefix of the files to write out. The resulting filenames
-  * will have .gltf and .bin 
-  */
-  vtkSetStringMacro(FilePrefix);
-  vtkGetStringMacro(FilePrefix);
-  //@}
-  vtkSetStringMacro(FileName);
-  vtkGetStringMacro(FileName);
-
-  //@}
-  vtkSetStringMacro(GltfFileAsset);
-  vtkGetStringMacro(GltfFileAsset);
-
+  vtkSetStringMacro(OutFileName);
+  vtkGetStringMacro(OutFileName);
 
 protected:
   vtkGLTFExporter();
   ~vtkGLTFExporter() override;
 
-  void WriteData() override;  
-  void WriteAnActor(vtkActor *anActor, FILE fpGltf, FILE fpBin,int count );
-  char *FileName; 
-  char *FilePrefix;
-  char *GltfFileAsset;
-private:
+  void WriteData() override;
+  void WriteAnActor(vtkActor *anActor);
 
-  vtkGLTFExporter(const vtkGLTFExporter&) = delete;
-  void operator=(const vtkGLTFExporter&) = delete;
+protected:
+  char *OutFileName;
+  tinygltf::Model Model;
 
 };
 
 #endif
+
