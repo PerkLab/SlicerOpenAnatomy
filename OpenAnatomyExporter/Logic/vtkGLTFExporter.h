@@ -16,6 +16,8 @@
 ==============================================================================*/
 
 class vtkActor;
+class vtkCellArray;
+class vtkPoints;
 
 #ifndef __vtkGLTFExporter_h
 #define __vtkGLTFExporter_h
@@ -41,18 +43,15 @@ public:
   static vtkGLTFExporter *New();
   vtkTypeMacro(vtkGLTFExporter, vtkExporter);
 
-  vtkSetStringMacro(OutFileName);
-  vtkGetStringMacro(OutFileName);
+  vtkSetStringMacro(GltfFileName);
+  vtkGetStringMacro(GltfFileName);
 
 protected:
   vtkGLTFExporter();
   ~vtkGLTFExporter() override;
-
   void WriteData() override;
   void WriteAnActor(vtkActor *anActor);
-
-protected:
-  char *OutFileName;
+  char *GltfFileName;
   tinygltf::Model Model;
 
 };

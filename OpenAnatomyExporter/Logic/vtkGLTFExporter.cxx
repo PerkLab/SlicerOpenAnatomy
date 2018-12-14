@@ -41,68 +41,57 @@ using namespace tinygltf;
 #include <vtkRenderWindow.h>
 #include <vtkTransform.h>
 #include <vtkGeometryFilter.h>
+#include "vtksys/SystemTools.hxx"
+#include "vtk_jsoncpp.h"
+#include "vtkCompositeDataIterator.h"
+#include "vtkCompositeDataSet.h"
 
 vtkStandardNewMacro(vtkGLTFExporter);
+namespace {
 
+  vtkPolyData *findPolyData(vtkDataObject* input)
+  {
+    // do we have polydata?
+    vtkPolyData *pd = vtkPolyData::SafeDownCast(input);
+    if (pd)
+    {
+      return pd;
+    }
+    vtkCompositeDataSet *cd = vtkCompositeDataSet::SafeDownCast(input);
+    if (cd)
+    {
+      vtkSmartPointer<vtkCompositeDataIterator> iter;
+      iter.TakeReference(cd->NewIterator());
+      for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
+      {
+        pd = vtkPolyData::SafeDownCast(iter->GetCurrentDataObject());
+        if (pd)
+        {
+          return pd;
+        }
+      }
+    }
+    return nullptr;
+  }
+}
 vtkGLTFExporter::vtkGLTFExporter()
 {
-  this->OutFileName = "C:\\Users\\schoueib\\Desktop\\defaultGLTF";
   this->Model.asset.version = "2.0";
   this->Model.asset.generator = "vtkGLTFExporter";
-  //tinygltf::Buffer  initBuffer = {};
-  //tinygltf::Mesh initMesh = {};
-  //initBuffer.name = "initial";
-  //this->Model.meshes.push_back(initMesh);
-  //this->Model.buffers.push_back(initBuffer);
-
-  //// TEST CODE // !!!!!!!!!!!!
-  // 
-
-  //initBuffer.name = "hi";
-
-  //this->Model.buffers[0].name = "hi";
-  
-  //this->Model.bufferViews[0].byteOffset = 0; 
-  //this->Model.accessors[0].bufferView = 0;
-
-
-  tinygltf::Model newModel;
-  tinygltf::TinyGLTF loader;
-   std::string err;
-   std::string warn;
-   std::string input_filename;
-   std::string output_filename;
-   //for test code, have the absolute path the a gltf sample as the input_filename. 
-   //gltf samples can be found: https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
-   output_filename = "c:\\users\\schoueib\\desktop\\segHELLO.gltf";
-   input_filename = "c:\\users\\schoueib\\desktop\\gltfexamples\\adamHead.gltf";
-   //warn: accessor array has hard coded indicies
-  bool ret = loader.LoadASCIIFromFile(&newModel, &err, &warn, input_filename.c_str());
-  
-  const tinygltf::Accessor& accessor = newModel.accessors[newModel.meshes[0].primitives[0].attributes["NORMALS"]];
-  const tinygltf::BufferView& bufferView = newModel.bufferViews[accessor.bufferView];
-  const tinygltf::Buffer& buffer = newModel.buffers[bufferView.buffer];
-  const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-  for (size_t i = 0; i < accessor.count; ++i) {
-    std::cout << "(" << positions[i * 3 + 0] << ", "// x
-      << positions[i * 3 + 1] << ", " // y
-      << positions[i * 3 + 2] << ")" // z
-      << "\n";
-  }
-  ////given a populated model write the model to a gltf file. 
-  //loader.WriteGltfSceneToFile(&Model, OutFileName, false,false,false,false); //works and writes the asset thus far. 
-  int i=0; ++i; // add break here 
-  // TEST CODE // !!!!!!!!!!!!!!
+  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\TESTGLTF"; 
+  tinygltf::Buffer initBuffer = {};
+  this->Model.buffers.push_back(initBuffer);
 }
 
 
 vtkGLTFExporter::~vtkGLTFExporter()
 {
-  delete[] this->OutFileName; 
+  delete[] this->GltfFileName; 
 }
 
 void vtkGLTFExporter::WriteData() //called by write()
 {
+  ///TODO: Add actor filter here
   //every vtk actor in the scene to be exported will be created and added to model.
   //model will then be written to a file using tinygltf::writegltfscenetofile(model,...) 
 
@@ -131,6 +120,8 @@ void vtkGLTFExporter::WriteData() //called by write()
       this->WriteAnActor(aPart);
     }
   }
+  tinygltf::TinyGLTF loader;
+  loader.WriteGltfSceneToFile(&Model, GltfFileName, false, false, false, false);
 }
 
 void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
@@ -150,76 +141,57 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   vtkIdType *indx = nullptr;
 
   //Filter the actor collection for actors that should be written
+  ///TODO: debug actor filter 
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast(Actor->GetMapper()); //get the mapper for the actor
-  if (mapper == nullptr)
+  vtkPolyData *pd = findPolyData(Actor->GetMapper()->GetInputDataObject(0, 0));
+  if (!pd &&!pd->GetPolys() && !pd->GetNumberOfCells() > 0)
   {
     return;
   }
-  
-  if (Actor->GetVisibility() == 0)
-  {
-    return;
-  }
-  int numCells = mapper->GetInput()->GetNumberOfCells();// example
-  std::cout << numCells << endl;
-  if (numCells < 100)
-  {
-    return;
-  }
+
   // Write Poly Data
-  // Create Buffer, BufferView, and Accessor
-  
+  // Create Buffer, BufferView, and Accessor with proper references. 
+  //write point data
+
   polyData = mapper->GetInput();
   points = vtkPoints::New();
   points = polyData->GetPoints();
-  std::vector<double> pointsVec;
+  double pt[3];
+  float fpt[3];
+  std::vector <unsigned char> dataArray = this->Model.buffers[0].data;
+  //tinygltf::buffer has no member "bytelength" which is required in the gltf v2.0 specs. Must clarify. 
+  int temp = this->Model.buffers[0].data.size();
+  size_t prevBufferSize = static_cast<size_t>(temp);
 
   for (int i = 0 ; i<=points->GetNumberOfPoints(); i++)
   {
-    pointsTriplet = points->GetPoint(i);
-    const float* pointsTrip = reinterpret_cast<const float*>(pointsTriplet);
-    //std::vector<unsigned char> dataforBuf = static_cast<unsigned char>(pointsTrip);
-    pointsVec.push_back(pointsTriplet[0]);
-    pointsVec.push_back(pointsTriplet[1]);
-    pointsVec.push_back(pointsTriplet[2]);
-
+    points->GetPoint(i,pt);
+    fpt[0] = pt[0];
+    fpt[1] = pt[1];
+    fpt[2] = pt[2];
+    unsigned char a = reinterpret_cast<unsigned char>(fpt);
+    dataArray.push_back(a);
   }
 
-  tinygltf::Accessor   ac = {};
+  this->Model.buffers[0].data = dataArray;
+  int temp2 = this->Model.buffers[0].data.size();
+  size_t newBufferSize = static_cast<size_t>(temp2);
+  //populate bufferview
   tinygltf::BufferView bv = {};
-  this->Model.accessors.push_back(ac);
-  this->Model.bufferViews.push_back(bv);
-
   bv.buffer = 0;
-  bv.byteOffset = 0;
-  ac.bufferView = 0;
-  ac.byteOffset = 0;
-  tinygltf::Buffer buf = this->Model.buffers[0];
+  bv.byteOffset = prevBufferSize + 1;
+  bv.byteLength = (newBufferSize - prevBufferSize);
+  this->Model.bufferViews.push_back(bv);
+  //populate Accessor
+  tinygltf::Accessor   ac = {};
+  ac.byteOffset = bv.byteOffset;
+  ac.bufferView = this->Model.bufferViews.size() - 1;
+  ac.componentType = 5126;  
+  ac.count = points->GetNumberOfPoints();
+  ac.type = TINYGLTF_TYPE_VEC3;
+  this->Model.accessors.push_back(ac);
 
 
-
-   tinygltf::Model newModel;
-   tinygltf::TinyGLTF loader;
-   std::string err;
-   std::string warn;
-   std::string input_filename;
-   std::string output_filename;
-   //for test code, have the absolute path the a gltf sample as the input_filename. 
-   //gltf samples can be found: https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
-   output_filename = "c:\\users\\schoueib\\desktop\\segHELLO.gltf";
-   input_filename = "c:\\users\\schoueib\\desktop\\gltfexamples\\box.gltf";
-   //warn: accessor array has hard coded indicies
-  bool ret = loader.LoadASCIIFromFile(&newModel, &err, &warn, input_filename.c_str());
-  
-  const tinygltf::Accessor& accessor = newModel.accessors[newModel.meshes[0].primitives[0].attributes["NORMALS"]];
-  const tinygltf::BufferView& bufferView = newModel.bufferViews[accessor.bufferView];
-  const tinygltf::Buffer& buffer = newModel.buffers[bufferView.buffer];
-  const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-  //std::vector<unsigned char> dataforBuf = reinterpret_cast<unsigned char>(pointsVec);
-
-  //given a populated model write the model to a gltf file. 
-  loader.WriteGltfSceneToFile(&Model, OutFileName, false,false,false,false); //works and writes the asset thus far. 
-  int j=0; ++j; // add break here 
-    
+  ///TODO: write cell data
 
 }
