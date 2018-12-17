@@ -137,14 +137,14 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   double *pointsTriplet;
   vtkCellArray *cells;
   vtkNew<vtkTransform> trans;
-  vtkIdType npts = 0;
-  vtkIdType *indx = nullptr;
+  //vtkIdType npts = 0;
+  //vtkIdType *indx = nullptr;
 
   //Filter the actor collection for actors that should be written
   ///TODO: debug actor filter 
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast(Actor->GetMapper()); //get the mapper for the actor
   vtkPolyData *pd = findPolyData(Actor->GetMapper()->GetInputDataObject(0, 0));
-  if (!pd &&!pd->GetPolys() && !pd->GetNumberOfCells() > 0)
+  if (!pd && !pd->GetPolys() && !pd->GetNumberOfCells() > 0)
   {
     return;
   }
@@ -163,9 +163,9 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   int temp = this->Model.buffers[0].data.size();
   size_t prevBufferSize = static_cast<size_t>(temp);
 
-  for (int i = 0 ; i<=points->GetNumberOfPoints(); i++)
+  for (int i = 0; i <= points->GetNumberOfPoints(); i++)
   {
-    points->GetPoint(i,pt);
+    points->GetPoint(i, pt);
     fpt[0] = pt[0];
     fpt[1] = pt[1];
     fpt[2] = pt[2];
@@ -186,12 +186,22 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   tinygltf::Accessor   ac = {};
   ac.byteOffset = bv.byteOffset;
   ac.bufferView = this->Model.bufferViews.size() - 1;
-  ac.componentType = 5126;  
+  ac.componentType = 5126;
   ac.count = points->GetNumberOfPoints();
   ac.type = TINYGLTF_TYPE_VEC3;
   this->Model.accessors.push_back(ac);
-
-
   ///TODO: write cell data
-
+  vtkCellArray *polygons = polyData->GetPolys();
+  vtkIdType npts;
+  vtkIdType *indx;
+  for (polygons->InitTraversal(); polygons->GetNextCell(npts, indx); )
+  {
+    for (int j = 0; j < npts; ++j)
+    {
+      unsigned int value = static_cast<unsigned int>(indx[j]);
+      unsigned char a = reinterpret_cast<unsigned char>(fpt);
+      dataArray.push_back(a);
+    }
+  }
+ 
 }
