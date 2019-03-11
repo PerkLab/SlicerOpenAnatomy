@@ -78,7 +78,7 @@ vtkGLTFExporter::vtkGLTFExporter()
 {
   this->Model.asset.version = "2.0";
   this->Model.asset.generator = "vtkGLTFExporter";
-  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\gltfTestFile1.gltf"; 
+  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\newgltf.gltf"; 
   tinygltf::Buffer initBuffer = {};
   this->Model.buffers.push_back(initBuffer); //one buffer to hold all data 
   tinygltf::Scene initScene = {};
@@ -174,23 +174,29 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   points = polyData->GetPoints();
   double pt[3];
   float fpt[3];
-  std::vector <unsigned char> dataArray = this->Model.buffers[0].data;
+  std::vector <unsigned char> pointDataArray = this->Model.buffers[0].data;
   //tinygltf::buffer has no member "bytelength" which is required in the gltf v2.0 specs. Must clarify. 
   int temp = this->Model.buffers[0].data.size();
   size_t prevBufferSize = static_cast<size_t>(temp);
-
-  for (int i = 0; i <= points->GetNumberOfPoints(); i++)
+  std::cout << "Numb Points: " << points->GetNumberOfPoints() << std::endl; 
+  for (int i = 0; i < points->GetNumberOfPoints(); i++)
   {
     points->GetPoint(i, pt);
     fpt[0] = pt[0];
     fpt[1] = pt[1];
     fpt[2] = pt[2];
-    unsigned char a = reinterpret_cast<unsigned char>(fpt);
-    dataArray.push_back(a);
+    std::vector<float> floatVector;
+    floatVector.push_back(fpt[0]);
+    floatVector.push_back(fpt[1]);
+    floatVector.push_back(fpt[2]);
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&floatVector[0]);
+    std::vector<unsigned char> byteVec(bytes, bytes + sizeof(float) * floatVector.size());
+    pointDataArray.insert(pointDataArray.end(), byteVec.begin(), byteVec.end());
   }
-  this->Model.buffers[0].data = dataArray;
+  this->Model.buffers[0].data = pointDataArray;
   int temp2 = this->Model.buffers[0].data.size();
   size_t newBufferSize = static_cast<size_t>(temp2);
+
   
   //write  bufferview
   tinygltf::BufferView bv = {};
@@ -204,7 +210,7 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac.byteOffset = bv.byteOffset;
   ac.bufferView = this->Model.bufferViews.size() - 1;
   ac.componentType = 5126;
-  ac.count = points->GetNumberOfPoints();
+  ac.count = points->GetNumberOfPoints()*3;
   ac.type = TINYGLTF_TYPE_VEC3;
   this->Model.accessors.push_back(ac); 
 
@@ -222,6 +228,8 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   vtkIdType npts;
   vtkIdType *indx;
   //save them to buffer
+  std::vector <unsigned char> cellDataArray = this->Model.buffers[0].data;
+
   int cellTemp = this->Model.buffers[0].data.size();
   size_t cellPrevBufferSize = static_cast<size_t>(cellTemp);
   for (polygons->InitTraversal(); polygons->GetNextCell(npts, indx); )
@@ -229,13 +237,15 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
     for (int j = 0; j < npts; ++j)
     {
       unsigned int value = static_cast<unsigned int>(indx[j]);
-      unsigned char a = reinterpret_cast<unsigned char>(fpt);
-      dataArray.push_back(a);
-    }
+      int intValue = static_cast<int>(value);
+      cellDataArray.push_back(intValue >> 24);
+      cellDataArray.push_back(intValue >> 16);
+      cellDataArray.push_back(intValue >> 8);
+      cellDataArray.push_back(intValue);
+    }  
   }
-  this->Model.buffers[0].data = dataArray;
-  int cellTemp2 = this->Model.buffers[0].data.size();
-  size_t cellNewBufferSize = static_cast<size_t>(cellTemp2);
+  int cellArrSize = cellDataArray.size();
+  size_t cellNewBufferSize = static_cast<size_t>(cellArrSize);
 
   //write  bufferview
   tinygltf::BufferView bv2 = {};
