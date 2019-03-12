@@ -78,7 +78,7 @@ vtkGLTFExporter::vtkGLTFExporter()
 {
   this->Model.asset.version = "2.0";
   this->Model.asset.generator = "vtkGLTFExporter";
-  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\newgltf.gltf"; 
+  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\fgltf.gltf"; 
   tinygltf::Buffer initBuffer = {};
   this->Model.buffers.push_back(initBuffer); //one buffer to hold all data 
   tinygltf::Scene initScene = {};
@@ -196,7 +196,8 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), pointDataArray.begin(), pointDataArray.end());
   int temp2 = this->Model.buffers[0].data.size();
   size_t newBufferSize = static_cast<size_t>(temp2);
-
+  std::cout << "Buffer bytelength after points:" << this->Model.buffers[0].data.size() << endl;
+  std::cout << "NewBuffersize after points:" << newBufferSize << endl;
   
   //write  bufferview
   tinygltf::BufferView bv = {};
@@ -204,13 +205,15 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   bv.byteOffset = prevBufferSize;
   bv.byteLength = (newBufferSize - prevBufferSize);
   this->Model.bufferViews.push_back(bv);
-  
+  std::cout << "BufferView bytelength after points:" << bv.byteLength << endl;
+  std::cout << "BufferView byteOffset after points:" << bv.byteOffset << endl;
+
   //write  Accessor 
   tinygltf::Accessor   ac = {};
   ac.byteOffset = bv.byteOffset;
   ac.bufferView = this->Model.bufferViews.size() - 1;
   ac.componentType = 5126;
-  ac.count = points->GetNumberOfPoints()*3;
+  ac.count = points->GetNumberOfPoints();
   ac.type = TINYGLTF_TYPE_VEC3;
   //get bounds 
   double range[6];
@@ -230,7 +233,7 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac.maxValues = maxVal;
   //write accessor to model
   this->Model.accessors.push_back(ac);
-
+  std::cout << "Acc byteoffset after points:" << ac.byteOffset << endl;
   //write the primitive
   tinygltf::Primitive aPrimitive = {};
   aPrimitive.mode = TINYGLTF_MODE_TRIANGLES;
@@ -246,8 +249,9 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   vtkIdType npts;
   vtkIdType *indx;
   //save them to buffer
-  std::vector <unsigned char> cellDataArray = this->Model.buffers[0].data;
-
+  std::vector <unsigned char> cellDataArray;
+  std::cout << "Number of cells: " << polygons->GetNumberOfCells() << endl;
+  std::cout << "Buffer bytelength before cells:" << this->Model.buffers[0].data.size() << endl;
   int cellTemp = this->Model.buffers[0].data.size();
   size_t cellPrevBufferSize = static_cast<size_t>(cellTemp);
   for (polygons->InitTraversal(); polygons->GetNextCell(npts, indx); )
@@ -262,17 +266,19 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
       cellDataArray.push_back(intValue);
     }  
   }
+  std::cout << "celldataarray bytelength after cells:" << cellDataArray.size() << endl;
   this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), cellDataArray.begin(), cellDataArray.end());
   int cellArrSize = cellDataArray.size();
-  size_t cellNewBufferSize = static_cast<size_t>(cellArrSize);
-
+  size_t cellNewBufferSize = this->Model.buffers[0].data.size();
+  std::cout << "Buffer bytelength after cells:" << this->Model.buffers[0].data.size() << endl;
   //write  bufferview
   tinygltf::BufferView bv2 = {};
   bv2.buffer = 0;
   bv2.byteOffset = cellPrevBufferSize;
   bv2.byteLength = (cellNewBufferSize - cellPrevBufferSize);
   this->Model.bufferViews.push_back(bv2);
-
+  std::cout << "BufferViewCell bytelength after:" << bv2.byteLength << endl;
+  std::cout << "BufferViewCell byteOffset after:" << bv2.byteOffset << endl;
   //write  Accessor 
   tinygltf::Accessor   ac2 = {};
   ac2.byteOffset = bv2.byteOffset;
@@ -282,7 +288,7 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac2.type = TINYGLTF_TYPE_SCALAR;
   this->Model.accessors.push_back(ac2);
   aPrimitive.indices = this->Model.accessors.size() - 1;
-
+  std::cout << "Acc byteoffset after points:" << ac2.byteOffset << endl;
   //write the mesh
   tinygltf::Mesh aMesh = {};
   std::vector<tinygltf::Primitive> meshPrimitives;
