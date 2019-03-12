@@ -193,7 +193,7 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
     std::vector<unsigned char> byteVec(bytes, bytes + sizeof(float) * floatVector.size());
     pointDataArray.insert(pointDataArray.end(), byteVec.begin(), byteVec.end());
   }
-  this->Model.buffers[0].data = pointDataArray;
+  this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), pointDataArray.begin(), pointDataArray.end());
   int temp2 = this->Model.buffers[0].data.size();
   size_t newBufferSize = static_cast<size_t>(temp2);
 
@@ -201,7 +201,7 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   //write  bufferview
   tinygltf::BufferView bv = {};
   bv.buffer = 0;
-  bv.byteOffset = prevBufferSize + 1;
+  bv.byteOffset = prevBufferSize;
   bv.byteLength = (newBufferSize - prevBufferSize);
   this->Model.bufferViews.push_back(bv);
   
@@ -212,13 +212,31 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac.componentType = 5126;
   ac.count = points->GetNumberOfPoints()*3;
   ac.type = TINYGLTF_TYPE_VEC3;
-  this->Model.accessors.push_back(ac); 
+  //get bounds 
+  double range[6];
+  std::vector<double> minVal;
+  std::vector<double> maxVal;
+  points->GetBounds(range);
+  //minimum Values
+  minVal.push_back(range[0]);
+  minVal.push_back(range[2]);
+  minVal.push_back(range[4]);
+  //max Values
+  maxVal.push_back(range[1]);
+  maxVal.push_back(range[3]);
+  maxVal.push_back(range[5]);
+
+  ac.minValues = minVal;
+  ac.maxValues = maxVal;
+  //write accessor to model
+  this->Model.accessors.push_back(ac);
 
   //write the primitive
   tinygltf::Primitive aPrimitive = {};
   aPrimitive.mode = TINYGLTF_MODE_TRIANGLES;
   aPrimitive.attributes.insert(std::make_pair("POSITION", this->Model.accessors.size() - 1));
 
+  
 
 
   //end write point data ===============================================================
@@ -244,19 +262,20 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
       cellDataArray.push_back(intValue);
     }  
   }
+  this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), cellDataArray.begin(), cellDataArray.end());
   int cellArrSize = cellDataArray.size();
   size_t cellNewBufferSize = static_cast<size_t>(cellArrSize);
 
   //write  bufferview
   tinygltf::BufferView bv2 = {};
   bv2.buffer = 0;
-  bv2.byteOffset = cellPrevBufferSize + 1;
+  bv2.byteOffset = cellPrevBufferSize;
   bv2.byteLength = (cellNewBufferSize - cellPrevBufferSize);
   this->Model.bufferViews.push_back(bv2);
-  
+
   //write  Accessor 
   tinygltf::Accessor   ac2 = {};
-  ac2.byteOffset = bv.byteOffset;
+  ac2.byteOffset = bv2.byteOffset;
   ac2.bufferView = this->Model.bufferViews.size() - 1;
   ac2.componentType = 5125;
   ac2.count = polygons->GetNumberOfCells();
