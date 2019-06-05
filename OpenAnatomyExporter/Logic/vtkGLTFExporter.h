@@ -15,26 +15,11 @@
 
 ==============================================================================*/
 
-class vtkActor;
-class vtkCellArray;
-class vtkPoints;
-
 #ifndef __vtkGLTFExporter_h
 #define __vtkGLTFExporter_h
 
-// TinyGltf
-#include "ThirdParty/tiny_gltf.h"
+#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h" // For export macro
 
-// Slicer includes
-#include "vtkSlicerModuleLogic.h"
-
-// MRML includes
-
-// STD includes
-#include <cstdlib>
-
-#include "vtkIOExportModule.h" // For export macro
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h"
 #include "vtkExporter.h"
 
 class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFExporter : public vtkExporter
@@ -43,18 +28,20 @@ public:
   static vtkGLTFExporter *New();
   vtkTypeMacro(vtkGLTFExporter, vtkExporter);
 
-  vtkSetStringMacro(GltfFileName);
-  vtkGetStringMacro(GltfFileName);
+  vtkSetStringMacro(FilePrefix);
+  vtkGetStringMacro(FilePrefix);
 
 protected:
   vtkGLTFExporter();
   ~vtkGLTFExporter() override;
-  void WriteData() override;
-  void WriteAnActor(vtkActor *anActor);
-  char *GltfFileName;
-  tinygltf::Model Model;
 
+  // Export all vtkActor in the scene that has vtkPolyData in it.
+  void WriteData() override;
+
+  char* FilePrefix;
+
+  class vtkInternals;
+  vtkInternals* Internals;
 };
 
 #endif
-

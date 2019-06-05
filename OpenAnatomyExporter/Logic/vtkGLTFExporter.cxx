@@ -21,6 +21,8 @@
 // OpenAnatomyExporter Logic includes
 #include "vtkGLTFExporter.h"
 
+#include "ThirdParty/tiny_gltf.h"
+
 using namespace tinygltf;
 
 // MRML includes
@@ -46,167 +48,93 @@ using namespace tinygltf;
 #include "vtkCompositeDataIterator.h"
 #include "vtkCompositeDataSet.h"
 
+#include <cstdlib>
+
 vtkStandardNewMacro(vtkGLTFExporter);
-namespace {
 
-  vtkPolyData *findPolyData(vtkDataObject* input)
-  {
-    // do we have polydata?
-    vtkPolyData *pd = vtkPolyData::SafeDownCast(input);
-    if (pd)
-    {
-      return pd;
-    }
-    vtkCompositeDataSet *cd = vtkCompositeDataSet::SafeDownCast(input);
-    if (cd)
-    {
-      vtkSmartPointer<vtkCompositeDataIterator> iter;
-      iter.TakeReference(cd->NewIterator());
-      for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
-      {
-        pd = vtkPolyData::SafeDownCast(iter->GetCurrentDataObject());
-        if (pd)
-        {
-          return pd;
-        }
-      }
-    }
-    return nullptr;
-  }
-}
-vtkGLTFExporter::vtkGLTFExporter()
+//----------------------------------------------------------------------------
+class vtkGLTFExporter::vtkInternals
 {
-  this->Model.asset.version = "2.0";
-  this->Model.asset.generator = "vtkGLTFExporter";
-  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\fgltf.gltf"; 
-  tinygltf::Buffer initBuffer = {};
-  this->Model.buffers.push_back(initBuffer); //one buffer to hold all data 
-  tinygltf::Scene initScene = {};
-  this->Model.scenes.push_back(initScene); 
-  this->Model.defaultScene = 0;// an index to what node shall be rendered runtime 
+public:
+  static void AddActorToModel(tinygltf::Model& gltfModel, vtkActor* anActor, std::string namePrefix);
+  static vtkPolyData* GetPolyData(vtkDataObject* input);
+};
 
+void AddVtkArrayToBuffer(tinygltf::Model& gltfModel, int bufferIndex, vtkDataArray* dataArray, size_t& offset, size_t& size)
+{
+  offset = gltfModel.buffers[0].data.size();
+  size = dataArray->GetNumberOfTuples() * dataArray->GetNumberOfComponents() * dataArray->GetElementComponentSize();
+  gltfModel.buffers[0].data.resize(offset + size);
+  memcpy(&(gltfModel.buffers[0].data[offset]), dataArray->GetVoidPointer(0), size);
 }
 
-
-vtkGLTFExporter::~vtkGLTFExporter()
+int GetGltfComponentTypeFromVtkDataType(int vtkDataType)
 {
-  delete[] this->GltfFileName; 
+  switch (vtkDataType)
+  {
+  case VTK_CHAR: return TINYGLTF_COMPONENT_TYPE_BYTE;
+  case VTK_SIGNED_CHAR: return TINYGLTF_COMPONENT_TYPE_BYTE;
+  case VTK_UNSIGNED_CHAR: return TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+  case VTK_SHORT: return TINYGLTF_COMPONENT_TYPE_SHORT;
+  case VTK_UNSIGNED_SHORT: return TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
+  case VTK_INT: return TINYGLTF_COMPONENT_TYPE_INT;
+  case VTK_UNSIGNED_INT: return TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
+  case VTK_FLOAT: return TINYGLTF_COMPONENT_TYPE_FLOAT;
+  case VTK_DOUBLE: return TINYGLTF_COMPONENT_TYPE_DOUBLE;
+  default:
+    // unsupported data type
+    return -1;
+  }
 }
-
-void vtkGLTFExporter::WriteData() //called by write()
+//----------------------------------------------------------------------------
+void vtkGLTFExporter::vtkInternals::AddActorToModel(tinygltf::Model& gltfModel, vtkActor* actor, std::string namePrefix)
 {
-  ///TODO: Add actor filter here
-  //every vtk actor in the scene to be exported will be created and added to model.
-  //model will then be written to a file using tinygltf::writegltfscenetofile(model,...) 
-
-  vtkRenderer *ren = this->ActiveRenderer;
-  if (!ren)
-  {
-    ren = this->RenderWindow->GetRenderers()->GetFirstRenderer();
-  }
-
-  if (ren->GetActors()->GetNumberOfItems() < 1)
-  {
-    vtkErrorMacro(<< "no actors found for writing .gltf file.");
-    return;
-  }
-  vtkPropCollection *pc;
-  vtkProp *aProp;
-  pc = ren->GetViewProps();
-  vtkCollectionSimpleIterator pit;
-  for (pc->InitTraversal(pit); (aProp = pc->GetNextProp(pit)); )
-  {
-    if (!aProp->GetVisibility())
-    {
-      continue;
-    }
-    vtkNew<vtkActorCollection> ac;
-    aProp->GetActors(ac);
-    vtkActor *anActor;
-    vtkCollectionSimpleIterator ait;
-    for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); )
-    {
-      vtkAssemblyPath *apath;
-      vtkActor *aPart;
-      for (anActor->InitPathTraversal(); (apath = anActor->GetNextPath()); )
-      {
-        aPart = static_cast<vtkActor *>(apath->GetLastNode()->GetViewProp());
-        if (aPart->GetVisibility() && aPart->GetMapper() && aPart->GetMapper()->GetInputAlgorithm())
-        {
-          aPart->GetMapper()->GetInputAlgorithm()->Update();
-          vtkPolyData *pd = findPolyData(aPart->GetMapper()->GetInputDataObject(0, 0));
-          if (pd &&pd->GetPolys() && pd->GetNumberOfCells() > 0 && follower == 0)
-          {
-            WriteAnActor(aPart);
-          }
-        }
-      }
-    }
-  }
-  tinygltf::TinyGLTF loader;
-  loader.WriteGltfSceneToFile(&Model, GltfFileName, false, false, false, false);
-}
-
-void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
-{
-  //Filter the actor collection for actors that should be written
-  ///TODO: debug actor filter 
-  vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast(Actor->GetMapper()); //get the mapper for the actor
-  vtkPolyData *pd = findPolyData(Actor->GetMapper()->GetInputDataObject(0, 0));
-  if (!pd && !pd->GetPolys() && !pd->GetNumberOfCells() > 0)
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+  vtkPolyData* polyData = vtkGLTFExporter::vtkInternals::GetPolyData(actor->GetMapper()->GetInputDataObject(0, 0));
+  if (!polyData || !polyData->GetPolys() || !polyData->GetNumberOfCells())
   {
     return;
   }
-  
+  //vtkPolyData* polyData = mapper->GetInput();
+
   // Write Poly Data
   // Create Buffer, BufferView, and Accessor with proper references. 
   //write point data ============================================================================================
   //do not need to write a buffer as there is only one buffer to hold all actors' data 
-  vtkPolyData *polyData;
-  polyData = mapper->GetInput();
-  vtkPoints *points;
-  points = vtkPoints::New();
-  points = polyData->GetPoints();
-  double pt[3];
-  float fpt[3];
-  std::vector <unsigned char> pointDataArray = this->Model.buffers[0].data;
-  //tinygltf::buffer has no member "bytelength" which is required in the gltf v2.0 specs. Must clarify. 
-  int temp = this->Model.buffers[0].data.size();
-  size_t prevBufferSize = static_cast<size_t>(temp);
-  for (int i = 0; i < points->GetNumberOfPoints(); i++)
+
+  if (gltfModel.buffers.empty())
   {
-    points->GetPoint(i, pt);
-    fpt[0] = pt[0];
-    fpt[1] = pt[1];
-    fpt[2] = pt[2];
-    std::vector<float> floatVector;
-    floatVector.push_back(fpt[0]);
-    floatVector.push_back(fpt[1]);
-    floatVector.push_back(fpt[2]);
-    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&floatVector[0]);
-    std::vector<unsigned char> byteVec(bytes, bytes + sizeof(float) * floatVector.size());
-    pointDataArray.insert(pointDataArray.end(), byteVec.begin(), byteVec.end());
+    tinygltf::Buffer initBuffer = {};
+    gltfModel.buffers.push_back(initBuffer); //one buffer to hold all data
   }
-  this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), pointDataArray.begin(), pointDataArray.end());
-  int temp2 = this->Model.buffers[0].data.size();
-  size_t newBufferSize = static_cast<size_t>(temp2);
+  
+  const int bufferIndex = 0;
+
+  vtkPoints* points = polyData->GetPoints();
+
+  size_t offset = 0;
+  size_t size = 0;
+  AddVtkArrayToBuffer(gltfModel, bufferIndex, points->GetData(), offset, size);
 
   //write  bufferview
   tinygltf::BufferView bv = {};
+  bv.name = namePrefix+"_positions_bv";
   bv.buffer = 0;
-  bv.byteOffset = prevBufferSize;
-  bv.byteLength = (newBufferSize - prevBufferSize);
-  this->Model.bufferViews.push_back(bv);
-
+  bv.byteOffset = offset;
+  bv.byteLength = size;
+  bv.target = TINYGLTF_TARGET_ARRAY_BUFFER;
+  gltfModel.bufferViews.push_back(bv);
 
   //write  Accessor 
-  tinygltf::Accessor   ac = {};
+  tinygltf::Accessor ac = {};
+  ac.name = namePrefix + "_positions_ac";
   ac.byteOffset = bv.byteOffset;
-  ac.bufferView = this->Model.bufferViews.size() - 1;
-  ac.componentType = 5126;
+  ac.bufferView = gltfModel.bufferViews.size() - 1;
+  ac.componentType = GetGltfComponentTypeFromVtkDataType(points->GetDataType());
   ac.count = points->GetNumberOfPoints();
   ac.type = TINYGLTF_TYPE_VEC3;
-  //get bounds 
+
+  //get bounds
   double range[6];
   std::vector<double> minVal;
   std::vector<double> maxVal;
@@ -223,22 +151,22 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac.minValues = minVal;
   ac.maxValues = maxVal;
   //write accessor to model
-  this->Model.accessors.push_back(ac);
+  gltfModel.accessors.push_back(ac);
 
   //write the primitive
   tinygltf::Primitive aPrimitive = {};
   aPrimitive.mode = TINYGLTF_MODE_TRIANGLES;
-  aPrimitive.attributes.insert(std::make_pair("POSITION", this->Model.accessors.size() - 1));
+  aPrimitive.attributes.insert(std::make_pair("POSITION", gltfModel.accessors.size() - 1));
 
   //end write point data ===============================================================
   //Write Cell Data
 
-  vtkCellArray *polygons = polyData->GetPolys();
+  vtkCellArray * polygons = polyData->GetPolys();
   vtkIdType npts;
-  vtkIdType *indx;
+  vtkIdType * indx;
   //save them to buffer
   std::vector <unsigned char> cellDataArray;
-  int cellTemp = this->Model.buffers[0].data.size();
+  int cellTemp = gltfModel.buffers[0].data.size();
   size_t cellPrevBufferSize = static_cast<size_t>(cellTemp);
   for (polygons->InitTraversal(); polygons->GetNextCell(npts, indx); )
   {
@@ -250,29 +178,29 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
       cellDataArray.push_back(intValue >> 16);
       cellDataArray.push_back(intValue >> 8);
       cellDataArray.push_back(intValue);
-    }  
+    }
   }
 
-  this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), cellDataArray.begin(), cellDataArray.end());
+  gltfModel.buffers[0].data.insert(gltfModel.buffers[0].data.end(), cellDataArray.begin(), cellDataArray.end());
   int cellArrSize = cellDataArray.size();
-  size_t cellNewBufferSize = this->Model.buffers[0].data.size();
+  size_t cellNewBufferSize = gltfModel.buffers[0].data.size();
 
   //write  bufferview
   tinygltf::BufferView bv2 = {};
   bv2.buffer = 0;
   bv2.byteOffset = cellPrevBufferSize;
   bv2.byteLength = (cellNewBufferSize - cellPrevBufferSize);
-  this->Model.bufferViews.push_back(bv2);
+  gltfModel.bufferViews.push_back(bv2);
 
   //write  Accessor 
   tinygltf::Accessor   ac2 = {};
   ac2.byteOffset = bv2.byteOffset;
-  ac2.bufferView = this->Model.bufferViews.size() - 1;
+  ac2.bufferView = gltfModel.bufferViews.size() - 1;
   ac2.componentType = 5125;
   ac2.count = polygons->GetNumberOfCells();
   ac2.type = TINYGLTF_TYPE_SCALAR;
-  this->Model.accessors.push_back(ac2);
-  aPrimitive.indices = this->Model.accessors.size() - 1;
+  gltfModel.accessors.push_back(ac2);
+  aPrimitive.indices = gltfModel.accessors.size() - 1;
 
   //write the mesh
   tinygltf::Mesh aMesh = {};
@@ -280,8 +208,108 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   meshPrimitives.push_back(aPrimitive);
   aMesh.primitives = meshPrimitives;
   tinygltf::Node aNode;
-  this->Model.meshes.push_back(aMesh);
-  aNode.mesh = this->Model.meshes.size()-1;
-  this->Model.nodes.push_back(aNode);
-  this->Model.scenes[0].nodes.push_back(this->Model.nodes.size()-1);
+  gltfModel.meshes.push_back(aMesh);
+  aNode.mesh = gltfModel.meshes.size() - 1;
+  gltfModel.nodes.push_back(aNode);
+  gltfModel.scenes[0].nodes.push_back(gltfModel.nodes.size() - 1);
+}
+
+//----------------------------------------------------------------------------
+vtkGLTFExporter::vtkGLTFExporter()
+: Internals(new vtkGLTFExporter::vtkInternals())
+{
+  this->FilePrefix = nullptr;
+}
+
+//----------------------------------------------------------------------------
+vtkGLTFExporter::~vtkGLTFExporter()
+{
+  this->SetFilePrefix(nullptr);
+  delete this->Internals;
+  this->Internals = nullptr;
+}
+
+//----------------------------------------------------------------------------
+vtkPolyData* vtkGLTFExporter::vtkInternals::GetPolyData(vtkDataObject* input)
+{
+  // do we have polydata?
+  vtkPolyData* pd = vtkPolyData::SafeDownCast(input);
+  if (pd)
+  {
+    return pd;
+  }
+  vtkCompositeDataSet* cd = vtkCompositeDataSet::SafeDownCast(input);
+  if (cd)
+  {
+    vtkSmartPointer<vtkCompositeDataIterator> iter;
+    iter.TakeReference(cd->NewIterator());
+    for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
+    {
+      pd = vtkPolyData::SafeDownCast(iter->GetCurrentDataObject());
+      if (pd)
+      {
+        return pd;
+      }
+    }
+  }
+  return nullptr;
+}
+
+//----------------------------------------------------------------------------
+void vtkGLTFExporter::WriteData() //called by write()
+{
+  vtkRenderer *ren = this->ActiveRenderer;
+  if (!ren)
+  {
+    ren = this->RenderWindow->GetRenderers()->GetFirstRenderer();
+  }
+  if (ren->GetActors()->GetNumberOfItems() < 1)
+  {
+    vtkErrorMacro(<< "no actors found for writing .gltf file.");
+    return;
+  }
+
+  tinygltf::Model gltfModel;
+  gltfModel.asset.version = "2.0";
+  gltfModel.asset.generator = "vtkGLTFExporter";
+  tinygltf::Scene initScene = {};
+  gltfModel.scenes.push_back(initScene);
+  gltfModel.defaultScene = 0;// an index to what node shall be rendered runtime 
+  
+  vtkPropCollection* pc = ren->GetViewProps();
+  vtkProp* aProp = nullptr;
+  vtkCollectionSimpleIterator pit;
+  for (pc->InitTraversal(pit); (aProp = pc->GetNextProp(pit)); )
+  {
+    if (!aProp->GetVisibility())
+    {
+      continue;
+    }
+    vtkNew<vtkActorCollection> ac;
+    aProp->GetActors(ac);
+    vtkActor *anActor = nullptr;
+    vtkCollectionSimpleIterator ait;
+    for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); )
+    {
+      vtkAssemblyPath *apath = nullptr;
+      for (anActor->InitPathTraversal(); (apath = anActor->GetNextPath()); )
+      {
+        vtkActor* aPart = static_cast<vtkActor *>(apath->GetLastNode()->GetViewProp());
+        if (aPart->GetVisibility() && aPart->GetMapper() && aPart->GetMapper()->GetInputAlgorithm())
+        {
+          aPart->GetMapper()->GetInputAlgorithm()->Update();
+          vtkPolyData *pd = vtkGLTFExporter::vtkInternals::GetPolyData(aPart->GetMapper()->GetInputDataObject(0, 0));
+          if (pd && pd->GetPolys() && pd->GetNumberOfCells() > 0)
+          {
+            vtkGLTFExporter::vtkInternals::AddActorToModel(gltfModel, aPart, "actor");
+          }
+        }
+      }
+    }
+  }
+
+  std::string gltfFileName = this->FilePrefix + std::string(".gltf");
+
+  tinygltf::TinyGLTF gltfWriter;
+  gltfWriter.WriteGltfSceneToFile(&gltfModel, gltfFileName, false, false, false, false);
 }
