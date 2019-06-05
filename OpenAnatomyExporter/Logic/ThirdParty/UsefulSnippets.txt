@@ -1,0 +1,137 @@
+#Useful snippets for dealing with polydata in 3D Slicer as well as commands for GLTFExporter in the python terminal. 
+
+
+#================3D Slicer Command line GLTF export=================
+import vtkSlicerOpenAnatomyExporterModuleLogicPython
+exporter=vtkSlicerOpenAnatomyExporterModuleLogicPython.vtkGLTFExporter()
+
+
+lm=slicer.app.layoutManager()
+tw0=lm.threeDWidget(0)
+tv0=tw0.threeDView()
+rw=tv0.renderWindow()
+#exporter=slicer.vtkGLTFExporter()
+exporter.SetRenderWindow(rw)
+exporter.Write()
+#================3D Slicer Command line GLTF export=================
+
+
+#============================OBJ export=========================================
+exporter=vtk.vtkOBJExporter()
+exporter.SetRenderWindow(rw)
+exporter.SetFilePrefix("c:\\Temp\\hi.obj")
+exporter.Write()
+#============================OBJ export=========================================
+
+
+
+
+
+# Slicer
+lm=slicer.app.layoutManager()
+tw0=lm.threeDWidget(0)
+tv0=tw0.threeDView()
+dms=vtk.vtkCollection()
+tv0.getDisplayableManagers(dms)
+for i in xrange(dms.GetNumberOfItems()):
+  print(repr(dms.GetItemAsObject(i)))
+
+dm=dms.GetItemAsObject(2)
+
+# VTK
+r=dm.GetRenderer()
+ac=r.GetActors()
+for i in xrange(ac.GetNumberOfItems()):
+  a=ac.GetItemAsObject(i)
+  print(str(i) + ": " + str(a.GetMapper().GetInput() + ": " + str(a.GetVisibility()))
+
+a=ac.GetItemAsObject(1)
+m=a.GetMapper()
+p=m.GetInput()
+p.GetPoints().GetNumberOfPoints()
+
+
+# >>> pp=p.GetPoints()
+# >>> c0=p.GetCell(0)
+# >>> c0
+# (vtkCommonDataModelPython.vtkTriangle)000001C96CAAAA08
+
+# >>> c0.GetNumberOfPoints()
+# 3L
+# >>> c0.GetPointId(0)
+# 0L
+# >>> c0.GetPointId(1)
+# 101L
+# >>> c0.GetPointId(2)
+# 115L
+# >>> pp.GetPoint(0)
+# (-24.56538963317871, -0.3544769287109375, -5.656410217285156)
+# >>> pp.GetPoint(101)
+# (-24.278953552246094, 0.1929168701171875, -4.8670654296875)
+# >>> pp.GetPoint(115)
+# (-24.403005599975586, 0.5924530029296875, -5.377044677734375)
+
+# https://github.com/syoyo/tinygltf/blob/master/examples/saver/main.cc#L45
+# https://github.com/syoyo/tinygltf/blob/master/tiny_gltf.h#L4339-L4386
+
+#
+#>>> a=acs.GetItemAsObject(10)
+#>>> m=a.GetMapper()
+#>>> p=m.GetInput()
+#>>> p.GetNumberOfCells()
+#8760L
+#>>> p
+#(vtkCommonDataModelPython.vtkPolyData)000001C96CD839A8
+#>>> m
+#(vtkRenderingOpenGL2Python.vtkOpenGLPolyDataMapper)000001C96CD837C8
+#>>> n=getNode('vtkMRMLModelNode4')
+#>>> np=n.GetPolyData()
+#>>> np
+#(vtkCommonDataModelPython.vtkPolyData)000001C96CD83828
+#>>> np.GetNumberOfPoints()
+#4382L
+#>>> p.GetNumberOfPoints()
+#4382L
+#>>> np.GetNumberOfCells()
+#8760L
+#>>> np.GetNumberOfPolys()
+#8760L
+##>>> p.GetNumberOfCells()
+#8760L
+#>>> pp=p.GetPoints()
+#>>> pp.GetPoint(0)
+#(-24.56538963317871, -0.3544769287109375, -5.656410217285156)
+#>>> pp.GetPoint(10)
+#(-24.555728912353516, 2.437896728515625, -7.3765106201171875)
+#>>> pp.GetPoint(100)
+#(-23.169723510742188, -5.3157501220703125, -3.597900390625)
+#>>> pp.GetPoint(1000)
+#(-17.905288696289062, 4.3857269287109375, 2.3371505737304688)
+#>>> c0=p.GetCell(0)
+#>>> c0
+#(vtkCommonDataModelPython.vtkTriangle)000001C96CAAAA08
+#>>> c0.GetNumberOfPoints()
+#3L
+#>>> c0.GetPointId(0)
+#0L
+#>>> c0.GetPointId(1)
+#101L
+#>>> c0.GetPointId(2)
+#115L
+#>>> pp.GetPoint(0)
+#(-24.56538963317871, -0.3544769287109375, -5.656410217285156)
+#>>> pp.GetPoint(101)
+#(-24.278953552246094, 0.1929168701171875, -4.8670654296875)
+#>>> pp.GetPoint(115)
+#(-24.403005599975586, 0.5924530029296875, -5.377044677734375)
+
+
+
+#create instance of vtkOpenAnatomy in python command line
+lm=slicer.app.layoutManager()
+tw0=lm.threeDWidget(0)
+tv0=tw0.threeDView()
+rw=tv0.renderWindow()
+exporter = vtkGLTFExporter();
+exporter.SetRenderWindow(rw)
+
