@@ -20,13 +20,12 @@
 
 // OpenAnatomyExporter Logic includes
 #include "vtkGLTFExporter.h"
-
 using namespace tinygltf;
 
 // MRML includes
 #include <vtkMRMLScene.h>
 
-// VTK includes TODO:
+// VTK includes TODO
 #include <vtkActorCollection.h>
 #include <vtkAssemblyPath.h>
 #include <vtkDataSet.h>
@@ -74,11 +73,12 @@ namespace {
     return nullptr;
   }
 }
+//!!!Please set the gltf file name!!!!
 vtkGLTFExporter::vtkGLTFExporter()
 {
   this->Model.asset.version = "2.0";
   this->Model.asset.generator = "vtkGLTFExporter";
-  this->GltfFileName = "C:\\Users\\schoueib\\Desktop\\gltfExamples\\valid3.gltf"; 
+  this->GltfFileName = ""; //Set file name!  
   tinygltf::Buffer initBuffer = {};
   this->Model.buffers.push_back(initBuffer); //one buffer to hold all data 
   tinygltf::Scene initScene = {};
@@ -180,8 +180,6 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   //tinygltf::buffer has no member "bytelength" which is required in the gltf v2.0 specs. Must clarify. 
   int temp = this->Model.buffers[0].data.size();
   size_t prevBufferSize = static_cast<size_t>(temp);
-  std::cout << "Buffer size before point writing: " << prevBufferSize << std::endl;
-  std::cout << "Number of points of actor: " << points->GetNumberOfPoints() << std::endl;
   for (int i = 0; i < points->GetNumberOfPoints(); i++)
   {
     points->GetPoint(i, pt);
@@ -196,13 +194,10 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
     std::vector<unsigned char> byteVec(bytes, bytes + sizeof(float) * floatVector.size());
     pointDataArray.insert(pointDataArray.end(), byteVec.begin(), byteVec.end());
   }
-  std::cout << "pointdataarray size: " << pointDataArray.size() << std::endl;
   this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), pointDataArray.begin(), pointDataArray.end());
   int temp2 = this->Model.buffers[0].data.size();
   size_t newBufferSize = static_cast<size_t>(temp2);
-
-  std::cout << "Buffer size after point writing: " << newBufferSize << std::endl;
-  
+ 
   //write  bufferview
   tinygltf::BufferView bv = {};
   bv.buffer = 0;
@@ -210,13 +205,12 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   bv.byteLength = (newBufferSize - prevBufferSize);
   bv.byteStride = 12;
   this->Model.bufferViews.push_back(bv);
-  std::cout << "Bufferview bytelength point writing: " << bv.byteLength << std::endl;
-  std::cout << "Bufferview byteoffset point writing: " << bv.byteOffset << std::endl;
+
   //write  Accessor 
   tinygltf::Accessor   ac = {};
-  ac.byteOffset = bv.byteOffset;
+  ac.byteOffset = 0; 
   ac.bufferView = this->Model.bufferViews.size() - 1;
-  ac.componentType = 5126;
+  ac.componentType = TINYGLTF_PARAMETER_TYPE_FLOAT;
   ac.count = points->GetNumberOfPoints();
   ac.type = TINYGLTF_TYPE_VEC3;
   //get bounds 
@@ -236,51 +230,44 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   ac.minValues = minVal;
   ac.maxValues = maxVal;
 
-  std::cout << "Ac.byteoffset point writing: " << ac.byteOffset << std::endl;
-  std::cout << "ac count point writing: " << ac.count << std::endl;
-  std::cout << "buffer size /12 : " << newBufferSize/12 << std::endl;
   //write accessor to model
   this->Model.accessors.push_back(ac);
 
   //write the primitive
   tinygltf::Primitive aPrimitive = {};
   aPrimitive.mode = TINYGLTF_MODE_TRIANGLES;
-  aPrimitive.attributes.insert(std::make_pair("POSITION", this->Model.accessors.size() - 1));
-  //test
+  aPrimitive.attributes.insert(std::make_pair("POSITION", this->Model.accessors.size() ));
+
   
 
 
   //end write point data ===============================================================
   //Write Cell Data
 
-
+  
   vtkIdType npts;
   vtkIdType *indx;
   //save them to buffer
   std::vector <unsigned char> cellDataArray;
   int cellTemp = this->Model.buffers[0].data.size();
   size_t cellPrevBufferSize = static_cast<size_t>(cellTemp);  
-  std::cout << "Buffer size before cell writing: " << cellPrevBufferSize << std::endl;
-  std::cout << "Number of cells of actor: " << polygons->GetNumberOfCells() << std::endl;
   for (polygons->InitTraversal(); polygons->GetNextCell(npts, indx); )
   {
     for (int j = 0; j < npts; ++j)
     {
-      //test correctness
       unsigned int value = static_cast<unsigned int>(indx[j]);
       int intValue = static_cast<int>(value);
-      cellDataArray.push_back(intValue >> 24);
-      cellDataArray.push_back(intValue >> 16);
-      cellDataArray.push_back(intValue >> 8);
+	  std::vector<unsigned char> intToBytes(int intValue);
+      //cellDataArray.push_back(intValue >> 24);
+      //cellDataArray.push_back(intValue >> 16);
+      //cellDataArray.push_back(intValue >> 8);
       cellDataArray.push_back(intValue);
     }  
   }
-  std::cout << "Cell data array size: " << cellDataArray.size() << std::endl;
+  
   this->Model.buffers[0].data.insert(this->Model.buffers[0].data.end(), cellDataArray.begin(), cellDataArray.end());
   int cellArrSize = cellDataArray.size();
   size_t cellNewBufferSize = this->Model.buffers[0].data.size();
-  std::cout << "Buffer size after cell writing: " << cellNewBufferSize << std::endl;
-
 
   //write  bufferview
   tinygltf::BufferView bv2 = {};
@@ -288,23 +275,17 @@ void vtkGLTFExporter::WriteAnActor(vtkActor *Actor)
   bv2.byteOffset = cellPrevBufferSize;
   bv2.byteLength = (cellNewBufferSize - cellPrevBufferSize);
   this->Model.bufferViews.push_back(bv2);
-  std::cout << "Bufferview bytelength cell writing: " << bv2.byteLength << std::endl;
-  std::cout << "Bufferview byteoffset cell writing: " << bv2.byteOffset << std::endl;
-  //test
+
   //write  Accessor 
   tinygltf::Accessor   ac2 = {};
-  ac2.byteOffset = bv2.byteOffset;
+  ac2.byteOffset = 0;
   ac2.bufferView = this->Model.bufferViews.size() - 1; //check if referencing the correct bufferview
-  ac2.componentType = 5125;
-  ac2.count = polygons->GetNumberOfCells() *3; // *3 ? 
+  ac2.componentType = TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT;
+  ac2.count = polygons->GetNumberOfCells()  *3; // *3 ? 
   ac2.type = TINYGLTF_TYPE_SCALAR;
   this->Model.accessors.push_back(ac2);
   aPrimitive.indices = this->Model.accessors.size() - 1;
 
-  std::cout << "Ac2.byteoffset point writing: " << ac2.byteOffset << std::endl;
-  std::cout << "ac2 count point writing: " << ac2.count << std::endl;
-  std::cout << "buffer size /12 'cell': " << cellNewBufferSize / 12 << std::endl;
-  //test 
   //write the mesh
   tinygltf::Mesh aMesh = {};
   std::vector<tinygltf::Primitive> meshPrimitives;
