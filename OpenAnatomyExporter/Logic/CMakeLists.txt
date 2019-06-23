@@ -10,8 +10,24 @@ set(${KIT}_INCLUDE_DIRECTORIES
 set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}Logic.cxx
   vtkSlicer${MODULE_NAME}Logic.h
-  vtkGLTFExporter.h	
-  vtkGLTFExporter.cxx	
+  vtkGLTFDocumentLoader.cxx
+  #vtkGLTFDocumentLoader.h
+  vtkGLTFDocumentLoaderInternals.cxx
+  #vtkGLTFDocumentLoaderInternals.h
+  vtkGLTFExporter.cxx
+  vtkGLTFExporter.h
+  vtkGLTFImporter.cxx
+  vtkGLTFImporter.h
+  vtkGLTFReader.cxx
+  vtkGLTFReader.h
+  vtkGLTFUtils.cxx
+  vtkGLTFUtils.h 
+  )
+
+set_source_files_properties(
+  vtkGLTFDocumentLoaderInternals.cxx
+  vtkGLTFDocumentLoader.cxx
+  WRAP_EXCLUDE
   )
 
 set(${KIT}_TARGET_LIBRARIES

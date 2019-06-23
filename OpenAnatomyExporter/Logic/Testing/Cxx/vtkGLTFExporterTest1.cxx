@@ -76,7 +76,7 @@ int vtkGLTFExporterTest1(int argc, char * argv[])
 
   vtkNew<vtkGLTFExporter> exporter;
   exporter->SetRenderWindow(window);
-  exporter->SetFilePrefix(filenamePrefix.c_str());
+  exporter->SetFileName(filenamePrefix.c_str());
   exporter->Write();
 
   std::string filename = filenamePrefix += ".gltf";
