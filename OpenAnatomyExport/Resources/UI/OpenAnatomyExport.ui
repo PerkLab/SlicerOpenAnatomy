@@ -94,7 +94,7 @@
    <item row="2" column="1">
     <widget class="ctkDirectoryButton" name="folderSelectorButton"/>
    </item>
-   <item row="3" column="0">
+   <item row="3" column="0" colspan="2">
     <widget class="QLabel" name="messageLabel">
      <property name="font">
       <font>

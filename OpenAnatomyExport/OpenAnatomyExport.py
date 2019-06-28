@@ -65,7 +65,9 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     logic = OpenAnatomyExportLogic()
     reductionFactor = self.ui.reductionFactorSliderWidget.value
     outputFolder = self.ui.folderSelectorButton.directory
-    logic.run(self.ui.inputSelector.currentNode(), reductionFactor, outputFolder)
+    self.ui.messageLabel.text = 'Exporting...'
+    message = logic.run(self.ui.inputSelector.currentNode(), reductionFactor, outputFolder)
+    self.ui.messageLabel.text = message
 
 #
 # OpenAnatomyExportLogic
@@ -109,7 +111,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     #   if "Volume Slice" in modelNode.GetName():
     #     continue
     #   modelNodes.append(modelNode)
-    newModelHierarchyNode = None
+    temporaryNodes = []
     if inputNode.IsA('vtkMRMLSegmentationNode'):
       segLogic = slicer.modules.segmentations.logic()
       newModelHierarchyNode = slicer.vtkMRMLModelHierarchyNode()
@@ -120,6 +122,8 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       newModelHierarchyNode.GetChildrenModelNodes(modelCollection)
       for i in range(modelCollection.GetNumberOfItems()):
         modelNodes.append(modelCollection.GetItemAsObject(i))
+        temporaryNodes.append(modelCollection.GetItemAsObject(i))
+      temporaryNodes.append(newModelHierarchyNode)
 
     renderer = vtk.vtkRenderer()
     renderWindow = vtk.vtkRenderWindow()
@@ -162,7 +166,12 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     # renderWindow.Render()
     # iren.Start()
 
-    return True
+    # Remove temporary nodes
+    for node in temporaryNodes:
+      slicer.mrmlScene.RemoveNode(node)
+
+    # Success message
+    return 'Export successful'
 
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
