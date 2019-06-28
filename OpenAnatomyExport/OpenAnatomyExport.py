@@ -100,9 +100,10 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       slicer.util.errorDisplay('Invalid input')
       return False
 
-    import datetime
-    dateTimeStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    outputFileName = dateTimeStr + "_SlicerScene.gltf"
+    # import datetime
+    # dateTimeStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # outputFileName = dateTimeStr + "_SlicerScene.gltf"
+    outputFileName = inputNode.GetName() + '.gltf'
     outputFilePath = os.path.join(outputFolder, outputFileName)
 
     allModelNodes = slicer.util.getNodesByClass("vtkMRMLModelNode")
