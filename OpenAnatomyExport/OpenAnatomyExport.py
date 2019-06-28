@@ -18,7 +18,7 @@ class OpenAnatomyExport(ScriptedLoadableModule):
     self.parent.title = "OpenAnatomy Export"
     self.parent.categories = ["OpenAnatomy"]
     self.parent.dependencies = []
-    self.parent.contributors = ["Andras Lasso (PerkLab)"]
+    self.parent.contributors = ["Andras Lasso (PerkLab), Csaba Pinter (PerkLab)"]
     self.parent.helpText = """
 Export model hierarchy or segmentation to OpenAnatomy-compatible glTF file.
 """
@@ -44,30 +44,28 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
     self.ui.inputSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.outputSelector.setMRMLScene(slicer.mrmlScene)
 
-    # connections
-    self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+    # Connections
+    self.ui.exportButton.connect('clicked(bool)', self.onExportButton)
     self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-    self.ui.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
 
     # Add vertical spacer
     self.layout.addStretch(1)
 
-    # Refresh Apply button state
+    # Refresh Export button state
     self.onSelect()
 
   def cleanup(self):
     pass
 
   def onSelect(self):
-    self.ui.applyButton.enabled = self.ui.inputSelector.currentNode() and self.ui.outputSelector.currentNode()
+    self.ui.exportButton.enabled = self.ui.inputSelector.currentNode()
 
-  def onApplyButton(self):
+  def onExportButton(self):
     logic = OpenAnatomyExportLogic()
-    enableScreenshotsFlag = self.ui.enableScreenshotsFlagCheckBox.checked
-    imageThreshold = self.ui.imageThresholdSliderWidget.value
-    logic.run(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(), imageThreshold, enableScreenshotsFlag)
+    reductionFactor = self.ui.reductionFactorSliderWidget.value
+    outputFolder = self.ui.folderSelectorButton.directory
+    logic.run(self.ui.inputSelector.currentNode(), reductionFactor, outputFolder)
 
 #
 # OpenAnatomyExportLogic
@@ -83,53 +81,75 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def hasImageData(self,volumeNode):
-    """This is an example logic method that
-    returns true if the passed in volume
-    node has valid image data
-    """
-    if not volumeNode:
-      logging.debug('hasImageData failed: no volume node')
-      return False
-    if volumeNode.GetImageData() is None:
-      logging.debug('hasImageData failed: no image data in volume node')
-      return False
-    return True
-
-  def isValidInputOutputData(self, inputVolumeNode, outputVolumeNode):
+  def isValidInputOutputData(self, inputNode):
     """Validates if the output is not the same as input
     """
-    if not inputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no input volume node defined')
-      return False
-    if not outputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no output volume node defined')
-      return False
-    if inputVolumeNode.GetID()==outputVolumeNode.GetID():
-      logging.debug('isValidInputOutputData failed: input and output volume is the same. Create a new volume for output to avoid this error.')
+    if not inputNode:
+      logging.debug('isValidInputOutputData failed: no input node defined')
       return False
     return True
 
-  def run(self, inputVolume, outputVolume, imageThreshold, enableScreenshots=0):
+  def run(self, inputNode, reductionFactor, outputFolder):
     """
     Run the actual algorithm
     """
 
-    if not self.isValidInputOutputData(inputVolume, outputVolume):
-      slicer.util.errorDisplay('Input volume is the same as output volume. Choose a different output volume.')
+    if not self.isValidInputOutputData(inputNode):
+      slicer.util.errorDisplay('Invalid input')
       return False
 
-    logging.info('Processing started')
+    import datetime
+    dateTimeStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    outputFileName = dateTimeStr + "_SlicerScene.gltf"
+    outputFilePath = os.path.join(outputFolder, outputFileName)
 
-    # Compute the thresholded output volume using the Threshold Scalar Volume CLI module
-    cliParams = {'InputVolume': inputVolume.GetID(), 'OutputVolume': outputVolume.GetID(), 'ThresholdValue' : imageThreshold, 'ThresholdType' : 'Above'}
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True)
+    allModelNodes = slicer.util.getNodesByClass("vtkMRMLModelNode")
+    modelNodes = []
+    for modelNode in allModelNodes:
+      if "Volume Slice" in modelNode.GetName():
+        continue
+      modelNodes.append(modelNode)
 
-    # Capture screenshot
-    if enableScreenshots:
-      self.takeScreenshot('OpenAnatomyExportTest-Start','MyScreenshot',-1)
+    renderer = vtk.vtkRenderer()
+    renderWindow = vtk.vtkRenderWindow()
+    renderWindow.AddRenderer(renderer)
 
-    logging.info('Processing completed')
+    for modelNode in modelNodes:
+      mapper = vtk.vtkPolyDataMapper()
+      if reductionFactor == 0.0:
+        mapper.SetInputConnection(modelNode.GetPolyDataConnection())
+      else:
+        deci = vtk.vtkDecimatePro()
+        deci.SetInputConnection(modelNode.GetPolyDataConnection())
+        deci.SetTargetReduction(reductionFactor)
+        deci.PreserveTopologyOn()
+        decimatedNormals = vtk.vtkPolyDataNormals()
+        decimatedNormals.SetInputConnection(deci.GetOutputPort())
+        decimatedNormals.SplittingOff()
+        mapper.SetInputConnection(decimatedNormals.GetOutputPort())
+      actor = vtk.vtkActor()
+      actor.SetMapper(mapper)
+      displayNode = modelNode.GetDisplayNode()
+      color = displayNode.GetColor()
+      actor.GetProperty().SetColor(color[0], color[1], color[2])
+      actor.GetProperty().SetSpecularPower(3.0)
+      actor.GetProperty().SetOpacity(displayNode.GetOpacity())
+      renderer.AddActor(actor)
+
+    exporter=slicer.vtkGLTFExporter()
+    exporter.SetRenderWindow(renderWindow)
+    exporter.SetFileName(outputFilePath)
+    exporter.InlineDataOn() # save to single file
+    exporter.Write()
+
+    # # Preview
+    # iren = vtk.vtkRenderWindowInteractor()
+    # iren.SetRenderWindow(renderWindow)
+    # iren.Initialize()
+    # renderer.ResetCamera()
+    # renderer.GetActiveCamera().Zoom(1.5)
+    # renderWindow.Render()
+    # iren.Start()
 
     return True
 
@@ -180,57 +200,3 @@ class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
     logic = OpenAnatomyExportLogic()
     self.assertIsNotNone( logic.hasImageData(volumeNode) )
     self.delayDisplay('Test passed!')
-
-
-
-
-# outputFileName = r"c:\Users\andra\OneDrive\Projects\OpenAnatomy\20190627-GltfExport\babacar-inline-dec60.gltf"
-# decimationFactor = 0.8
-
-# allModelNodes = slicer.util.getNodesByClass("vtkMRMLModelNode")
-# modelNodes = []
-# for modelNode in allModelNodes:
-#   if "Volume Slice" in modelNode.GetName():
-#     continue
-#   modelNodes.append(modelNode)
-
-# renderer = vtk.vtkRenderer()
-# renderWindow = vtk.vtkRenderWindow()
-# renderWindow.AddRenderer(renderer)
-
-# for modelNode in modelNodes:
-#   mapper = vtk.vtkPolyDataMapper()
-#   if decimationFactor == 0.0:
-#     mapper.SetInputConnection(modelNode.GetPolyDataConnection())
-#   else:
-#     deci = vtk.vtkDecimatePro()
-#     deci.SetInputConnection(modelNode.GetPolyDataConnection())
-#     deci.SetTargetReduction(decimationFactor)
-#     deci.PreserveTopologyOn()
-#     decimatedNormals = vtk.vtkPolyDataNormals()
-#     decimatedNormals.SetInputConnection(deci.GetOutputPort())
-#     decimatedNormals.SplittingOff()
-#     mapper.SetInputConnection(decimatedNormals.GetOutputPort())
-#   actor = vtk.vtkActor()
-#   actor.SetMapper(mapper)
-#   displayNode = modelNode.GetDisplayNode()
-#   color = displayNode.GetColor()
-#   actor.GetProperty().SetColor(color[0], color[1], color[2]);
-#   actor.GetProperty().SetSpecularPower(3.0)
-#   actor.GetProperty().SetOpacity(displayNode.GetOpacity())
-#   renderer.AddActor(actor)
-
-# exporter=slicer.vtkGLTFExporter()
-# exporter.SetRenderWindow(renderWindow)
-# exporter.SetFileName(outputFileName)
-# exporter.InlineDataOn() # save to single file
-# exporter.Write()
-
-# # # Preview
-# # iren = vtk.vtkRenderWindowInteractor()
-# # iren.SetRenderWindow(renderWindow)
-# # iren.Initialize()
-# # renderer.ResetCamera()
-# # renderer.GetActiveCamera().Zoom(1.5)
-# # renderWindow.Render()
-# # iren.Start()

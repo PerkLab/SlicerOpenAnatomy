@@ -50,21 +50,24 @@
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="ctkSliderWidget" name="imageThresholdSliderWidget">
+    <widget class="ctkSliderWidget" name="reductionFactorSliderWidget">
      <property name="toolTip">
       <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
      </property>
      <property name="singleStep">
-      <double>0.100000000000000</double>
+      <double>0.050000000000000</double>
+     </property>
+     <property name="pageStep">
+      <double>0.200000000000000</double>
      </property>
      <property name="minimum">
-      <double>-100.000000000000000</double>
+      <double>0.000000000000000</double>
      </property>
      <property name="maximum">
-      <double>100.000000000000000</double>
+      <double>1.000000000000000</double>
      </property>
      <property name="value">
-      <double>0.500000000000000</double>
+      <double>0.000000000000000</double>
      </property>
     </widget>
    </item>
@@ -75,7 +78,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
+   <item row="4" column="0" colspan="2">
     <widget class="QPushButton" name="exportButton">
      <property name="enabled">
       <bool>false</bool>
@@ -90,6 +93,19 @@
    </item>
    <item row="2" column="1">
     <widget class="ctkDirectoryButton" name="folderSelectorButton"/>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="messageLabel">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
