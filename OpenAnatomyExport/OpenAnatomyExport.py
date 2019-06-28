@@ -105,10 +105,21 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     allModelNodes = slicer.util.getNodesByClass("vtkMRMLModelNode")
     modelNodes = []
-    for modelNode in allModelNodes:
-      if "Volume Slice" in modelNode.GetName():
-        continue
-      modelNodes.append(modelNode)
+    # for modelNode in allModelNodes:
+    #   if "Volume Slice" in modelNode.GetName():
+    #     continue
+    #   modelNodes.append(modelNode)
+    newModelHierarchyNode = None
+    if inputNode.IsA('vtkMRMLSegmentationNode'):
+      segLogic = slicer.modules.segmentations.logic()
+      newModelHierarchyNode = slicer.vtkMRMLModelHierarchyNode()
+      newModelHierarchyNode.SetName(inputNode.GetName() + '_Models')
+      slicer.mrmlScene.AddNode(newModelHierarchyNode)
+      success = segLogic.ExportAllSegmentsToModelHierarchy(inputNode, newModelHierarchyNode)
+      modelCollection = vtk.vtkCollection()
+      newModelHierarchyNode.GetChildrenModelNodes(modelCollection)
+      for i in range(modelCollection.GetNumberOfItems()):
+        modelNodes.append(modelCollection.GetItemAsObject(i))
 
     renderer = vtk.vtkRenderer()
     renderWindow = vtk.vtkRenderWindow()
