@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>213</width>
-    <height>144</height>
+    <width>390</width>
+    <height>228</height>
    </rect>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Input Volume:</string>
+      <string>Segmentation to export:</string>
      </property>
     </widget>
    </item>
@@ -25,7 +25,7 @@
      </property>
      <property name="nodeTypes">
       <stringlist>
-       <string>vtkMRMLScalarVolumeNode</string>
+       <string>vtkMRMLSegmentationNode</string>
       </stringlist>
      </property>
      <property name="showChildNodeTypes">
@@ -40,44 +40,16 @@
     </widget>
    </item>
    <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
+    <widget class="QLabel" name="label_3">
+     <property name="toolTip">
+      <string>Decimation factor determining how much the mesh complexity will be reduced</string>
+     </property>
      <property name="text">
-      <string>Output Volume:</string>
+      <string>Reduction factor:</string>
      </property>
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="qMRMLNodeComboBox" name="outputSelector">
-     <property name="toolTip">
-      <string>Pick the output to the algorithm.</string>
-     </property>
-     <property name="nodeTypes">
-      <stringlist>
-       <string>vtkMRMLScalarVolumeNode</string>
-      </stringlist>
-     </property>
-     <property name="showChildNodeTypes">
-      <bool>false</bool>
-     </property>
-     <property name="noneEnabled">
-      <bool>true</bool>
-     </property>
-     <property name="addEnabled">
-      <bool>true</bool>
-     </property>
-     <property name="removeEnabled">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Image threshold:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
     <widget class="ctkSliderWidget" name="imageThresholdSliderWidget">
      <property name="toolTip">
       <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
@@ -96,35 +68,28 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>Enable Screenshots:</string>
+      <string>Output folder:</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
-    <widget class="QCheckBox" name="enableScreenshotsFlagCheckBox">
-     <property name="toolTip">
-      <string>If checked, take screen shots for tutorials. Use Save Data to write them to disk.</string>
-     </property>
-     <property name="text">
-      <string> </string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QPushButton" name="applyButton">
+   <item row="3" column="0" colspan="2">
+    <widget class="QPushButton" name="exportButton">
      <property name="enabled">
       <bool>false</bool>
      </property>
      <property name="toolTip">
-      <string>Run the algorithm.</string>
+      <string>Export selected data to Gltf</string>
      </property>
      <property name="text">
-      <string>Apply</string>
+      <string>Export</string>
      </property>
     </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="ctkDirectoryButton" name="folderSelectorButton"/>
    </item>
   </layout>
  </widget>
@@ -133,6 +98,11 @@
    <class>qMRMLNodeComboBox</class>
    <extends>QWidget</extends>
    <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ctkDirectoryButton</class>
+   <extends>QWidget</extends>
+   <header>ctkDirectoryButton.h</header>
   </customwidget>
   <customwidget>
    <class>ctkSliderWidget</class>
