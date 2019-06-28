@@ -51,12 +51,6 @@
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
   </customwidget>
-  <customwidget>
-   <class>qSlicerGltfSupportFooBarWidget</class>
-   <extends>QWidget</extends>
-   <header>qSlicerGltfSupportFooBarWidget.h</header>
-   <container>1</container>
-  </customwidget>
  </customwidgets>
  <resources/>
  <connections/>

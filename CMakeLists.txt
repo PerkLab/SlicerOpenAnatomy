@@ -9,7 +9,7 @@ set(EXTENSION_CATEGORY "Segmentation")
 set(EXTENSION_CONTRIBUTORS "Andras Lasso (PerkLab), Csaba Pinter (PerkLab), Michael Halle (SPL)")
 set(EXTENSION_DESCRIPTION "3D Slicer extension for exporting Slicer scenes to use in the OpenAnatomy.org browser")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/SlicerOpenAnatomy.png")
-set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/SlicerOpenAnatomy/Screenshots/1.png")
+set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/Screenshot01.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
 
 #-----------------------------------------------------------------------------
