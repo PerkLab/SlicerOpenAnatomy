@@ -15,19 +15,19 @@
 
 ==============================================================================*/
 
-#ifndef __qSlicerOpenAnatomyExporterModule_h
-#define __qSlicerOpenAnatomyExporterModule_h
+#ifndef __qSlicerGltfSupportModule_h
+#define __qSlicerGltfSupportModule_h
 
 // SlicerQt includes
 #include "qSlicerLoadableModule.h"
 
-#include "qSlicerOpenAnatomyExporterModuleExport.h"
+#include "qSlicerGltfSupportModuleExport.h"
 
-class qSlicerOpenAnatomyExporterModulePrivate;
+class qSlicerGltfSupportModulePrivate;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class Q_SLICER_QTMODULES_OPENANATOMYEXPORTER_EXPORT
-qSlicerOpenAnatomyExporterModule
+class Q_SLICER_QTMODULES_GLTFSUPPORT_EXPORT
+qSlicerGltfSupportModule
   : public qSlicerLoadableModule
 {
   Q_OBJECT
@@ -39,8 +39,8 @@ qSlicerOpenAnatomyExporterModule
 public:
 
   typedef qSlicerLoadableModule Superclass;
-  explicit qSlicerOpenAnatomyExporterModule(QObject *parent=0);
-  virtual ~qSlicerOpenAnatomyExporterModule();
+  explicit qSlicerGltfSupportModule(QObject *parent=0);
+  virtual ~qSlicerGltfSupportModule();
 
   qSlicerGetTitleMacro(QTMODULE_TITLE);
 
@@ -52,6 +52,8 @@ public:
 
   virtual QStringList categories()const;
   virtual QStringList dependencies() const;
+
+  bool isHidden()const override; 
 
 protected:
 
@@ -65,11 +67,11 @@ protected:
   virtual vtkMRMLAbstractLogic* createLogic();
 
 protected:
-  QScopedPointer<qSlicerOpenAnatomyExporterModulePrivate> d_ptr;
+  QScopedPointer<qSlicerGltfSupportModulePrivate> d_ptr;
 
 private:
-  Q_DECLARE_PRIVATE(qSlicerOpenAnatomyExporterModule);
-  Q_DISABLE_COPY(qSlicerOpenAnatomyExporterModule);
+  Q_DECLARE_PRIVATE(qSlicerGltfSupportModule);
+  Q_DISABLE_COPY(qSlicerGltfSupportModule);
 
 };
 

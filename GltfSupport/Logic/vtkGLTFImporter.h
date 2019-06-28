@@ -48,7 +48,7 @@
 #ifndef vtkGLTFImporter_h
 #define vtkGLTFImporter_h
 
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h" // For export macro
+#include "vtkSlicerGltfSupportModuleLogicExport.h" // For export macro
 #include "vtkImporter.h"
 #include "vtkSmartPointer.h" // For SmartPointer
 
@@ -59,7 +59,7 @@ class vtkCamera;
 class vtkGLTFDocumentLoader;
 class vtkTexture;
 
-class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFImporter : public vtkImporter
+class VTK_SLICER_GLTFSUPPORT_MODULE_LOGIC_EXPORT vtkGLTFImporter : public vtkImporter
 {
 public:
   static vtkGLTFImporter* New();

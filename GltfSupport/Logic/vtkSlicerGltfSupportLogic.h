@@ -15,14 +15,14 @@
 
 ==============================================================================*/
 
-// .NAME vtkSlicerOpenAnatomyExporterLogic - slicer logic class for volumes manipulation
+// .NAME vtkSlicerGltfSupportLogic - slicer logic class for volumes manipulation
 // .SECTION Description
 // This class manages the logic associated with reading, saving,
 // and changing propertied of the volumes
 
 
-#ifndef __vtkSlicerOpenAnatomyExporterLogic_h
-#define __vtkSlicerOpenAnatomyExporterLogic_h
+#ifndef __vtkSlicerGltfSupportLogic_h
+#define __vtkSlicerGltfSupportLogic_h
 
 // Slicer includes
 #include "vtkSlicerModuleLogic.h"
@@ -32,22 +32,22 @@
 // STD includes
 #include <cstdlib>
 
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h"
+#include "vtkSlicerGltfSupportModuleLogicExport.h"
 
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkSlicerOpenAnatomyExporterLogic :
+class VTK_SLICER_GLTFSUPPORT_MODULE_LOGIC_EXPORT vtkSlicerGltfSupportLogic :
   public vtkSlicerModuleLogic
 {
 public:
 
-  static vtkSlicerOpenAnatomyExporterLogic *New();
-  vtkTypeMacro(vtkSlicerOpenAnatomyExporterLogic, vtkSlicerModuleLogic);
+  static vtkSlicerGltfSupportLogic *New();
+  vtkTypeMacro(vtkSlicerGltfSupportLogic, vtkSlicerModuleLogic);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:
-  vtkSlicerOpenAnatomyExporterLogic();
-  virtual ~vtkSlicerOpenAnatomyExporterLogic();
+  vtkSlicerGltfSupportLogic();
+  virtual ~vtkSlicerGltfSupportLogic();
 
   virtual void SetMRMLSceneInternal(vtkMRMLScene* newScene);
   /// Register MRML Node classes to Scene. Gets called automatically when the MRMLScene is attached to this logic class.
@@ -57,8 +57,8 @@ protected:
   virtual void OnMRMLSceneNodeRemoved(vtkMRMLNode* node);
 private:
 
-  vtkSlicerOpenAnatomyExporterLogic(const vtkSlicerOpenAnatomyExporterLogic&); // Not implemented
-  void operator=(const vtkSlicerOpenAnatomyExporterLogic&); // Not implemented
+  vtkSlicerGltfSupportLogic(const vtkSlicerGltfSupportLogic&); // Not implemented
+  void operator=(const vtkSlicerGltfSupportLogic&); // Not implemented
 };
 
 #endif

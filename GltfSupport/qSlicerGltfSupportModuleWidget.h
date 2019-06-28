@@ -15,19 +15,19 @@
 
 ==============================================================================*/
 
-#ifndef __qSlicerOpenAnatomyExporterModuleWidget_h
-#define __qSlicerOpenAnatomyExporterModuleWidget_h
+#ifndef __qSlicerGltfSupportModuleWidget_h
+#define __qSlicerGltfSupportModuleWidget_h
 
 // SlicerQt includes
 #include "qSlicerAbstractModuleWidget.h"
 
-#include "qSlicerOpenAnatomyExporterModuleExport.h"
+#include "qSlicerGltfSupportModuleExport.h"
 
-class qSlicerOpenAnatomyExporterModuleWidgetPrivate;
+class qSlicerGltfSupportModuleWidgetPrivate;
 class vtkMRMLNode;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class Q_SLICER_QTMODULES_OPENANATOMYEXPORTER_EXPORT qSlicerOpenAnatomyExporterModuleWidget :
+class Q_SLICER_QTMODULES_GLTFSUPPORT_EXPORT qSlicerGltfSupportModuleWidget :
   public qSlicerAbstractModuleWidget
 {
   Q_OBJECT
@@ -35,20 +35,20 @@ class Q_SLICER_QTMODULES_OPENANATOMYEXPORTER_EXPORT qSlicerOpenAnatomyExporterMo
 public:
 
   typedef qSlicerAbstractModuleWidget Superclass;
-  qSlicerOpenAnatomyExporterModuleWidget(QWidget *parent=0);
-  virtual ~qSlicerOpenAnatomyExporterModuleWidget();
+  qSlicerGltfSupportModuleWidget(QWidget *parent=0);
+  virtual ~qSlicerGltfSupportModuleWidget();
 
 public slots:
 
 
 protected:
-  QScopedPointer<qSlicerOpenAnatomyExporterModuleWidgetPrivate> d_ptr;
+  QScopedPointer<qSlicerGltfSupportModuleWidgetPrivate> d_ptr;
 
   virtual void setup();
 
 private:
-  Q_DECLARE_PRIVATE(qSlicerOpenAnatomyExporterModuleWidget);
-  Q_DISABLE_COPY(qSlicerOpenAnatomyExporterModuleWidget);
+  Q_DECLARE_PRIVATE(qSlicerGltfSupportModuleWidget);
+  Q_DISABLE_COPY(qSlicerGltfSupportModuleWidget);
 };
 
 #endif

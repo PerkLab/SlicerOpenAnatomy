@@ -19,44 +19,44 @@
 #include <QDebug>
 
 // SlicerQt includes
-#include "qSlicerOpenAnatomyExporterModuleWidget.h"
-#include "ui_qSlicerOpenAnatomyExporterModuleWidget.h"
+#include "qSlicerGltfSupportModuleWidget.h"
+#include "ui_qSlicerGltfSupportModuleWidget.h"
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class qSlicerOpenAnatomyExporterModuleWidgetPrivate: public Ui_qSlicerOpenAnatomyExporterModuleWidget
+class qSlicerGltfSupportModuleWidgetPrivate: public Ui_qSlicerGltfSupportModuleWidget
 {
 public:
-  qSlicerOpenAnatomyExporterModuleWidgetPrivate();
+  qSlicerGltfSupportModuleWidgetPrivate();
 };
 
 //-----------------------------------------------------------------------------
-// qSlicerOpenAnatomyExporterModuleWidgetPrivate methods
+// qSlicerGltfSupportModuleWidgetPrivate methods
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModuleWidgetPrivate::qSlicerOpenAnatomyExporterModuleWidgetPrivate()
+qSlicerGltfSupportModuleWidgetPrivate::qSlicerGltfSupportModuleWidgetPrivate()
 {
 }
 
 //-----------------------------------------------------------------------------
-// qSlicerOpenAnatomyExporterModuleWidget methods
+// qSlicerGltfSupportModuleWidget methods
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModuleWidget::qSlicerOpenAnatomyExporterModuleWidget(QWidget* _parent)
+qSlicerGltfSupportModuleWidget::qSlicerGltfSupportModuleWidget(QWidget* _parent)
   : Superclass( _parent )
-  , d_ptr( new qSlicerOpenAnatomyExporterModuleWidgetPrivate )
+  , d_ptr( new qSlicerGltfSupportModuleWidgetPrivate )
 {
 }
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModuleWidget::~qSlicerOpenAnatomyExporterModuleWidget()
+qSlicerGltfSupportModuleWidget::~qSlicerGltfSupportModuleWidget()
 {
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerOpenAnatomyExporterModuleWidget::setup()
+void qSlicerGltfSupportModuleWidget::setup()
 {
-  Q_D(qSlicerOpenAnatomyExporterModuleWidget);
+  Q_D(qSlicerGltfSupportModuleWidget);
   d->setupUi(this);
   this->Superclass::setup();
 }

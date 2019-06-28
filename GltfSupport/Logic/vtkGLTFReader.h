@@ -53,7 +53,7 @@
 #ifndef vtkGLTFReader_h
 #define vtkGLTFReader_h
 
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h" // For export macro
+#include "vtkSlicerGltfSupportModuleLogicExport.h" // For export macro
 #include "vtkMultiBlockDataSetAlgorithm.h"
 #include "vtkSmartPointer.h" // For SmartPointer
 
@@ -66,7 +66,7 @@ class vtkGLTFDocumentLoader;
 class vtkImageData;
 class vtkStringArray;
 
-class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFReader : public vtkMultiBlockDataSetAlgorithm
+class VTK_SLICER_GLTFSUPPORT_MODULE_LOGIC_EXPORT vtkGLTFReader : public vtkMultiBlockDataSetAlgorithm
 {
 public:
   static vtkGLTFReader* New();

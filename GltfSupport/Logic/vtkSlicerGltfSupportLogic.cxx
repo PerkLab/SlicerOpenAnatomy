@@ -15,8 +15,8 @@
 
 ==============================================================================*/
 
-// OpenAnatomyExporter Logic includes
-#include "vtkSlicerOpenAnatomyExporterLogic.h"
+// GltfSupport Logic includes
+#include "vtkSlicerGltfSupportLogic.h"
 
 // MRML includes
 #include <vtkMRMLScene.h>
@@ -30,26 +30,26 @@
 #include <cassert>
 
 //----------------------------------------------------------------------------
-vtkStandardNewMacro(vtkSlicerOpenAnatomyExporterLogic);
+vtkStandardNewMacro(vtkSlicerGltfSupportLogic);
 
 //----------------------------------------------------------------------------
-vtkSlicerOpenAnatomyExporterLogic::vtkSlicerOpenAnatomyExporterLogic()
+vtkSlicerGltfSupportLogic::vtkSlicerGltfSupportLogic()
 {
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerOpenAnatomyExporterLogic::~vtkSlicerOpenAnatomyExporterLogic()
+vtkSlicerGltfSupportLogic::~vtkSlicerGltfSupportLogic()
 {
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSlicerGltfSupportLogic::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic::SetMRMLSceneInternal(vtkMRMLScene * newScene)
+void vtkSlicerGltfSupportLogic::SetMRMLSceneInternal(vtkMRMLScene * newScene)
 {
   vtkNew<vtkIntArray> events;
   events->InsertNextValue(vtkMRMLScene::NodeAddedEvent);
@@ -59,25 +59,25 @@ void vtkSlicerOpenAnatomyExporterLogic::SetMRMLSceneInternal(vtkMRMLScene * newS
 }
 
 //-----------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic::RegisterNodes()
+void vtkSlicerGltfSupportLogic::RegisterNodes()
 {
   assert(this->GetMRMLScene() != 0);
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic::UpdateFromMRMLScene()
+void vtkSlicerGltfSupportLogic::UpdateFromMRMLScene()
 {
   assert(this->GetMRMLScene() != 0);
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic
+void vtkSlicerGltfSupportLogic
 ::OnMRMLSceneNodeAdded(vtkMRMLNode* vtkNotUsed(node))
 {
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerOpenAnatomyExporterLogic
+void vtkSlicerGltfSupportLogic
 ::OnMRMLSceneNodeRemoved(vtkMRMLNode* vtkNotUsed(node))
 {
 }

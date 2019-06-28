@@ -35,12 +35,12 @@
 #ifndef vtkGLTFExporter_h
 #define vtkGLTFExporter_h
 
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h" // For export macro
+#include "vtkSlicerGltfSupportModuleLogicExport.h" // For export macro
 #include "vtkExporter.h"
 
 #include <string> // for std::string
 
-class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFExporter : public vtkExporter
+class VTK_SLICER_GLTFSUPPORT_MODULE_LOGIC_EXPORT vtkGLTFExporter : public vtkExporter
 {
 public:
   static vtkGLTFExporter *New();

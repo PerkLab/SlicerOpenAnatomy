@@ -15,64 +15,64 @@
 
 ==============================================================================*/
 
-// OpenAnatomyExporter Logic includes
-#include <vtkSlicerOpenAnatomyExporterLogic.h>
+// GltfSupport Logic includes
+#include <vtkSlicerGltfSupportLogic.h>
 
-// OpenAnatomyExporter includes
-#include "qSlicerOpenAnatomyExporterModule.h"
-#include "qSlicerOpenAnatomyExporterModuleWidget.h"
+// GltfSupport includes
+#include "qSlicerGltfSupportModule.h"
+#include "qSlicerGltfSupportModuleWidget.h"
 
 //-----------------------------------------------------------------------------
 #if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
 #include <QtPlugin>
-Q_EXPORT_PLUGIN2(qSlicerOpenAnatomyExporterModule, qSlicerOpenAnatomyExporterModule);
+Q_EXPORT_PLUGIN2(qSlicerGltfSupportModule, qSlicerGltfSupportModule);
 #endif
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class qSlicerOpenAnatomyExporterModulePrivate
+class qSlicerGltfSupportModulePrivate
 {
 public:
-  qSlicerOpenAnatomyExporterModulePrivate();
+  qSlicerGltfSupportModulePrivate();
 };
 
 //-----------------------------------------------------------------------------
-// qSlicerOpenAnatomyExporterModulePrivate methods
+// qSlicerGltfSupportModulePrivate methods
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModulePrivate::qSlicerOpenAnatomyExporterModulePrivate()
+qSlicerGltfSupportModulePrivate::qSlicerGltfSupportModulePrivate()
 {
 }
 
 //-----------------------------------------------------------------------------
-// qSlicerOpenAnatomyExporterModule methods
+// qSlicerGltfSupportModule methods
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModule::qSlicerOpenAnatomyExporterModule(QObject* _parent)
+qSlicerGltfSupportModule::qSlicerGltfSupportModule(QObject* _parent)
   : Superclass(_parent)
-  , d_ptr(new qSlicerOpenAnatomyExporterModulePrivate)
+  , d_ptr(new qSlicerGltfSupportModulePrivate)
 {
 }
 
 //-----------------------------------------------------------------------------
-qSlicerOpenAnatomyExporterModule::~qSlicerOpenAnatomyExporterModule()
+qSlicerGltfSupportModule::~qSlicerGltfSupportModule()
 {
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerOpenAnatomyExporterModule::helpText() const
+QString qSlicerGltfSupportModule::helpText() const
 {
   return "This is a loadable module that can be bundled in an extension";
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerOpenAnatomyExporterModule::acknowledgementText() const
+QString qSlicerGltfSupportModule::acknowledgementText() const
 {
   return "This work was partially funded by NIH grant NXNNXXNNNNNN-NNXN";
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerOpenAnatomyExporterModule::contributors() const
+QStringList qSlicerGltfSupportModule::contributors() const
 {
   QStringList moduleContributors;
   moduleContributors << QString("John Doe (AnyWare Corp.)");
@@ -80,38 +80,45 @@ QStringList qSlicerOpenAnatomyExporterModule::contributors() const
 }
 
 //-----------------------------------------------------------------------------
-QIcon qSlicerOpenAnatomyExporterModule::icon() const
+QIcon qSlicerGltfSupportModule::icon() const
 {
-  return QIcon(":/Icons/OpenAnatomyExporter.png");
+  return QIcon(":/Icons/GltfSupport.png");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerOpenAnatomyExporterModule::categories() const
+QStringList qSlicerGltfSupportModule::categories() const
 {
-  return QStringList() << "Examples";
+  return QStringList() << "OpenAnatomy";
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerOpenAnatomyExporterModule::dependencies() const
+QStringList qSlicerGltfSupportModule::dependencies() const
 {
   return QStringList();
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerOpenAnatomyExporterModule::setup()
+bool qSlicerGltfSupportModule::isHidden() const
+{
+  // infrastructure module only, there is no GUI
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerGltfSupportModule::setup()
 {
   this->Superclass::setup();
 }
 
 //-----------------------------------------------------------------------------
-qSlicerAbstractModuleRepresentation* qSlicerOpenAnatomyExporterModule
+qSlicerAbstractModuleRepresentation* qSlicerGltfSupportModule
 ::createWidgetRepresentation()
 {
-  return new qSlicerOpenAnatomyExporterModuleWidget;
+  return new qSlicerGltfSupportModuleWidget;
 }
 
 //-----------------------------------------------------------------------------
-vtkMRMLAbstractLogic* qSlicerOpenAnatomyExporterModule::createLogic()
+vtkMRMLAbstractLogic* qSlicerGltfSupportModule::createLogic()
 {
-  return vtkSlicerOpenAnatomyExporterLogic::New();
+  return vtkSlicerGltfSupportLogic::New();
 }

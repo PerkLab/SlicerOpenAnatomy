@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>qSlicerOpenAnatomyExporterModuleWidget</class>
- <widget class="qSlicerWidget" name="qSlicerOpenAnatomyExporterModuleWidget">
+ <class>qSlicerGltfSupportModuleWidget</class>
+ <widget class="qSlicerWidget" name="qSlicerGltfSupportModuleWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -20,9 +20,6 @@
       <string>Display</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <widget class="qSlicerOpenAnatomyExporterFooBarWidget" name="FooBar" native="true"/>
-      </item>
      </layout>
     </widget>
    </item>
@@ -55,9 +52,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>qSlicerOpenAnatomyExporterFooBarWidget</class>
+   <class>qSlicerGltfSupportFooBarWidget</class>
    <extends>QWidget</extends>
-   <header>qSlicerOpenAnatomyExporterFooBarWidget.h</header>
+   <header>qSlicerGltfSupportFooBarWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

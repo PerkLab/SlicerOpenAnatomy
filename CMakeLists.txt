@@ -4,11 +4,11 @@ project(SlicerOpenAnatomy)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "http://slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/SlicerOpenAnatomy")
-set(EXTENSION_CATEGORY "Exporter")
-set(EXTENSION_CONTRIBUTORS "John Doe (AnyWare Corp.)")
+set(EXTENSION_HOMEPAGE "https://github.com/PerkLab/SlicerOpenAnatomy")
+set(EXTENSION_CATEGORY "Segmentation")
+set(EXTENSION_CONTRIBUTORS "Andras Lasso (PerkLab), Csaba Pinter (PerkLab), Michael Halle (SPL)")
 set(EXTENSION_DESCRIPTION "3D Slicer extension for exporting Slicer scenes to use in the OpenAnatomy.org browser")
-set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/SlicerOpenAnatomy.png")
+set(EXTENSION_ICONURL "https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/SlicerOpenAnatomy.png")
 set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/SlicerOpenAnatomy/Screenshots/1.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
 
@@ -19,7 +19,8 @@ include(${Slicer_USE_FILE})
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(OpenAnatomyExporter)
+add_subdirectory(GltfSupport)
+add_subdirectory(OpenAnatomyExport)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

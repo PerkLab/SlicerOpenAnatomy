@@ -37,7 +37,7 @@
 #ifndef vtkGLTFDocumentLoader_h
 #define vtkGLTFDocumentLoader_h
 
-#include "vtkSlicerOpenAnatomyExporterModuleLogicExport.h" // For export macro
+#include "vtkSlicerGltfSupportModuleLogicExport.h" // For export macro
 #include "vtkObject.h"
 #include "vtkSmartPointer.h" // For SmartPointer
 
@@ -57,7 +57,7 @@ class vtkPolyData;
 class vtkTransform;
 class vtkUnsignedShortArray;
 
-class VTK_SLICER_OPENANATOMYEXPORTER_MODULE_LOGIC_EXPORT vtkGLTFDocumentLoader : public vtkObject
+class VTK_SLICER_GLTFSUPPORT_MODULE_LOGIC_EXPORT vtkGLTFDocumentLoader : public vtkObject
 {
 public:
   static vtkGLTFDocumentLoader* New();
