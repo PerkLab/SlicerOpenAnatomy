@@ -113,18 +113,21 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     #     continue
     #   modelNodes.append(modelNode)
     temporaryNodes = []
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    exportedModelsFolderItemId = None
     if inputNode.IsA('vtkMRMLSegmentationNode'):
       segLogic = slicer.modules.segmentations.logic()
-      newModelHierarchyNode = slicer.vtkMRMLModelHierarchyNode()
-      newModelHierarchyNode.SetName(inputNode.GetName() + '_Models')
-      slicer.mrmlScene.AddNode(newModelHierarchyNode)
-      success = segLogic.ExportAllSegmentsToModelHierarchy(inputNode, newModelHierarchyNode)
-      modelCollection = vtk.vtkCollection()
-      newModelHierarchyNode.GetChildrenModelNodes(modelCollection)
-      for i in range(modelCollection.GetNumberOfItems()):
-        modelNodes.append(modelCollection.GetItemAsObject(i))
-        temporaryNodes.append(modelCollection.GetItemAsObject(i))
-      temporaryNodes.append(newModelHierarchyNode)
+      
+      folderName = inputNode.GetName() + '_Models'
+      exportedModelsFolderItemId = shNode.CreateFolderItem(shNode.GetSceneItemID(), folderName)
+      success = segLogic.ExportAllSegmentsToModels(inputNode, exportedModelsFolderItemId)
+      exportedModelItemIDs = vtk.vtkIdList()
+      shNode.GetItemChildren(exportedModelsFolderItemId, exportedModelItemIDs)
+      for index in range(exportedModelItemIDs.GetNumberOfIds()):
+        exportedModelItemID = exportedModelItemIDs.GetId(index)
+        exportedModel = shNode.GetItemDataNode(exportedModelItemID)
+        modelNodes.append(exportedModel)
+        temporaryNodes.append(exportedModel)
 
     renderer = vtk.vtkRenderer()
     renderWindow = vtk.vtkRenderWindow()
@@ -170,6 +173,9 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     # Remove temporary nodes
     for node in temporaryNodes:
       slicer.mrmlScene.RemoveNode(node)
+
+    if exportedModelsFolderItemId:
+      shNode.RemoveItem(exportedModelsFolderItemId)
 
     # Success message
     return 'Export successful'
