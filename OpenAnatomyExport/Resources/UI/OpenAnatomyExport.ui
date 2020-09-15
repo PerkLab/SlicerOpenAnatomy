@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>390</width>
+    <width>343</width>
     <height>228</height>
    </rect>
   </property>
@@ -19,23 +19,9 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="qMRMLNodeComboBox" name="inputSelector">
-     <property name="toolTip">
-      <string>Pick the input to the algorithm.</string>
-     </property>
-     <property name="nodeTypes">
-      <stringlist>
-       <string>vtkMRMLSegmentationNode</string>
-      </stringlist>
-     </property>
-     <property name="showChildNodeTypes">
-      <bool>false</bool>
-     </property>
-     <property name="addEnabled">
-      <bool>false</bool>
-     </property>
-     <property name="removeEnabled">
-      <bool>false</bool>
+    <widget class="qMRMLSubjectHierarchyComboBox" name="inputSelector">
+     <property name="defaultText">
+      <string>Select segmentation node or model folder</string>
      </property>
     </widget>
    </item>
@@ -55,10 +41,10 @@
       <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
      </property>
      <property name="singleStep">
-      <double>0.050000000000000</double>
+      <double>0.010000000000000</double>
      </property>
      <property name="pageStep">
-      <double>0.200000000000000</double>
+      <double>0.100000000000000</double>
      </property>
      <property name="minimum">
       <double>0.000000000000000</double>
@@ -67,18 +53,65 @@
       <double>1.000000000000000</double>
      </property>
      <property name="value">
-      <double>0.000000000000000</double>
+      <double>0.900000000000000</double>
      </property>
     </widget>
    </item>
    <item row="2" column="0">
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Output folder:</string>
+      <string>Output format:</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="2" column="1">
+    <widget class="QComboBox" name="outputFormatSelector">
+     <item>
+      <property name="text">
+       <string>glTF</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>OBJ</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>scene</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Output location:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="ctkPathLineEdit" name="outputFileFolderSelector">
+       <property name="filters">
+        <set>ctkPathLineEdit::Dirs|ctkPathLineEdit::Drives|ctkPathLineEdit::Executable|ctkPathLineEdit::NoDot|ctkPathLineEdit::NoDotDot|ctkPathLineEdit::PermissionMask|ctkPathLineEdit::Readable|ctkPathLineEdit::Writable</set>
+       </property>
+       <property name="settingKey">
+        <string>OpenAnatomy/OutputFolder</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="outputModelHierarchyLabel">
+       <property name="text">
+        <string>(model hierarchy)</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0" colspan="2">
     <widget class="QPushButton" name="exportButton">
      <property name="enabled">
       <bool>false</bool>
@@ -91,19 +124,13 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="ctkDirectoryButton" name="folderSelectorButton"/>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QLabel" name="messageLabel">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
+   <item row="6" column="0" colspan="2">
+    <widget class="QPlainTextEdit" name="statusLabel">
+     <property name="enabled">
+      <bool>true</bool>
      </property>
-     <property name="text">
-      <string/>
+     <property name="textInteractionFlags">
+      <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -111,19 +138,24 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>qMRMLNodeComboBox</class>
-   <extends>QWidget</extends>
-   <header>qMRMLNodeComboBox.h</header>
+   <class>ctkComboBox</class>
+   <extends>QComboBox</extends>
+   <header>ctkComboBox.h</header>
   </customwidget>
   <customwidget>
-   <class>ctkDirectoryButton</class>
+   <class>ctkPathLineEdit</class>
    <extends>QWidget</extends>
-   <header>ctkDirectoryButton.h</header>
+   <header>ctkPathLineEdit.h</header>
   </customwidget>
   <customwidget>
    <class>ctkSliderWidget</class>
    <extends>QWidget</extends>
    <header>ctkSliderWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLSubjectHierarchyComboBox</class>
+   <extends>ctkComboBox</extends>
+   <header>qMRMLSubjectHierarchyComboBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
