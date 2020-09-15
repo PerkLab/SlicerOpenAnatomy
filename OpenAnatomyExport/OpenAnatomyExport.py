@@ -76,16 +76,19 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
   def onExportButton(self):
     slicer.app.setOverrideCursor(qt.Qt.WaitCursor)
     try:
-      self.ui.statusLabel.plainText = 'Exporting...'
+      self.ui.statusLabel.plainText = ''
+      self.addLog('Exporting...')
       self.ui.outputFileFolderSelector.addCurrentPathToHistory()
       reductionFactor = self.ui.reductionFactorSliderWidget.value
       outputFormat = self.ui.outputFormatSelector.currentText
       outputFolder = self.ui.inputSelector.currentItem() if outputFormat == "models" else self.ui.outputFileFolderSelector.currentPath
       self.logic.run(self.ui.inputSelector.currentItem(), reductionFactor, outputFormat, outputFolder)
+      self.addLog('Export successful.')
     except Exception as e:
       self.addLog("Error: {0}".format(str(e)))
       import traceback
       traceback.print_exc()
+      self.addLog('Export failed.')
     slicer.app.restoreOverrideCursor()
 
   def addLog(self, text):
@@ -147,6 +150,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       folderName = inputName + '_Models'
       inputShFolderItemId = shNode.CreateFolderItem(shNode.GetSceneItemID(), folderName)
       inputSegmentationNode = shNode.GetItemDataNode(inputItem)
+      self.addLog('Export segmentation to models. This may take a few minutes.')
       success = segLogic.ExportAllSegmentsToModels(inputSegmentationNode, inputShFolderItemId)
 
       outputShFolderItemId = inputShFolderItemId
@@ -171,9 +175,10 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     modelNodes = vtk.vtkCollection()
     shNode.GetDataNodesInBranch(inputShFolderItemId, modelNodes, "vtkMRMLModelNode")
     for modelNodeIndex in range(modelNodes.GetNumberOfItems()):
-      self.addLog("Model: {0}/{1}".format(modelNodeIndex+1, modelNodes.GetNumberOfItems()))
-      slicer.app.processEvents()
       inputModelNode = modelNodes.GetItemAsObject(modelNodeIndex)
+
+      self.addLog("Model {0}/{1}: {2}".format(modelNodeIndex+1, modelNodes.GetNumberOfItems(), inputModelNode.GetName()))
+      slicer.app.processEvents()
 
       existingOutputModelItemId = shNode.GetItemChildWithName(outputShFolderItemId, inputModelNode.GetName())
       if existingOutputModelItemId:
@@ -256,9 +261,6 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     if exportToFile:
       shNode.RemoveItem(outputShFolderItemId)
-
-    # Success message
-    self.addLog('Export successful.')
 
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
