@@ -206,6 +206,11 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       decimatedNormals.Update()
       outputModelNode.SetAndObservePolyData(decimatedNormals.GetOutput())
 
+      outputPolyData = outputModelNode.GetPolyData()
+      if outputPolyData.GetNumberOfPoints()==0 or outputPolyData.GetNumberOfCells()==0:
+        self.addLog("  Warning: empty model, not exported.")
+        continue
+
       if exportToFile:
 
         ras2lps = vtk.vtkMatrix4x4()
@@ -223,7 +228,13 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         actor.SetMapper(mapper)
         displayNode = outputModelNode.GetDisplayNode()
         color = displayNode.GetColor()
+        ambient = 0.1
+        diffuse = 0.9
+        specular = 0.2
         actor.GetProperty().SetColor(color[0], color[1], color[2])
+        actor.GetProperty().SetAmbientColor(ambient * color[0], ambient * color[1], ambient * color[2])
+        actor.GetProperty().SetDiffuseColor(diffuse * color[0], diffuse * color[1], diffuse * color[2])
+        actor.GetProperty().SetSpecularColor(specular * color[0], specular * color[1], specular * color[2])
         actor.GetProperty().SetSpecularPower(3.0)
         actor.GetProperty().SetOpacity(displayNode.GetOpacity())
         renderer.AddActor(actor)
