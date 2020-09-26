@@ -46,13 +46,18 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(uiWidget)
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
+    # Set scene in MRML widgets
     self.ui.inputSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.inputSelector.setNodeTypes(["vtkMRMLSegmentationNode"])
+    self.ui.imageInputSelector.setMRMLScene(slicer.mrmlScene)
 
     # Connections
     self.ui.exportButton.connect('clicked(bool)', self.onExportButton)
     self.ui.inputSelector.connect("currentItemChanged(vtkIdType)", self.onSelect)
     self.ui.outputFormatSelector.connect("currentIndexChanged(int)", self.onSelect)
+
+    self.ui.imageExportButton.connect('clicked(bool)', self.onImageExportButton)
+    self.ui.imageInputSelector.connect("currentItemChanged(vtkIdType)", self.onSelect)
+    self.ui.imageOutputFormatSelector.connect("currentIndexChanged(int)", self.onSelect)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -73,6 +78,8 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     self.ui.outputModelHierarchyLabel.visible = (currentFormat == "scene")
     self.ui.outputFileFolderSelector.visible = (currentFormat != "scene")
 
+    self.ui.imageExportButton.enabled = self.ui.imageInputSelector.currentNode()
+
   def onExportButton(self):
     slicer.app.setOverrideCursor(qt.Qt.WaitCursor)
     try:
@@ -82,13 +89,28 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
       reductionFactor = self.ui.reductionFactorSliderWidget.value
       outputFormat = self.ui.outputFormatSelector.currentText
       outputFolder = self.ui.inputSelector.currentItem() if outputFormat == "models" else self.ui.outputFileFolderSelector.currentPath
-      self.logic.run(self.ui.inputSelector.currentItem(), reductionFactor, outputFormat, outputFolder)
+      self.logic.exportModel(self.ui.inputSelector.currentItem(), reductionFactor, outputFormat, outputFolder)
       self.addLog('Export successful.')
     except Exception as e:
       self.addLog("Error: {0}".format(str(e)))
       import traceback
       traceback.print_exc()
       self.addLog('Export failed.')
+    slicer.app.restoreOverrideCursor()
+
+  def onImageExportButton(self):
+    slicer.app.setOverrideCursor(qt.Qt.WaitCursor)
+    try:
+      self.ui.imageOutputFileFolderSelector.addCurrentPathToHistory()
+      imageOutputFormat = self.ui.imageOutputFormatSelector.currentText
+      imageOutputFolder = self.ui.imageOutputFileFolderSelector.currentPath
+      self.logic.exportImage(self.ui.imageInputSelector.currentNode(), imageOutputFormat, imageOutputFolder)
+      slicer.util.delayDisplay('Export successful.')
+    except Exception as e:
+      logging.error("Error: {0}".format(str(e)))
+      import traceback
+      traceback.print_exc()
+      slicer.util.errorDisplay('Export failed. See application log for details.')
     slicer.app.restoreOverrideCursor()
 
   def addLog(self, text):
@@ -128,11 +150,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       return False
     return True
 
-  def run(self, inputItem, reductionFactor, outputFormat, outputFolder):
-    """
-    Run the actual algorithm
-    """
-
+  def exportModel(self, inputItem, reductionFactor, outputFormat, outputFolder):
     exportToFile = (outputFormat != "scene")
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -272,6 +290,14 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     if exportToFile:
       shNode.RemoveItem(outputShFolderItemId)
+
+  def exportImage(self, volumeNode, outputFormat, outputFolder):
+    writer=vtk.vtkXMLImageDataWriter()
+    writer.SetFileName("{0}/{1}.vti".format(outputFolder, volumeNode.GetName()))
+    writer.SetInputData(volumeNode.GetImageData())
+    writer.SetCompressorTypeToZLib()
+    writer.Write()
+
 
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):

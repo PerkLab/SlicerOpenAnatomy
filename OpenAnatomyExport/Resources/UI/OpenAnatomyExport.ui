@@ -6,137 +6,240 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>343</width>
-    <height>228</height>
+    <width>405</width>
+    <height>418</height>
    </rect>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton">
      <property name="text">
-      <string>Segmentation to export:</string>
+      <string>Segmentation and models export</string>
      </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Segmentation to export:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="qMRMLSubjectHierarchyComboBox" name="inputSelector">
+        <property name="defaultText">
+         <string>Select segmentation node or model folder</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>vtkMRMLSegmentationNode</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="toolTip">
+         <string>Decimation factor determining how much the mesh complexity will be reduced</string>
+        </property>
+        <property name="text">
+         <string>Reduction factor:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="ctkSliderWidget" name="reductionFactorSliderWidget">
+        <property name="toolTip">
+         <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
+        </property>
+        <property name="singleStep">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="pageStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="minimum">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>0.900000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Output format:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="outputFormatSelector">
+        <item>
+         <property name="text">
+          <string>glTF</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>OBJ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>scene</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Output location:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="ctkPathLineEdit" name="outputFileFolderSelector">
+          <property name="filters">
+           <set>ctkPathLineEdit::Dirs|ctkPathLineEdit::Drives|ctkPathLineEdit::Executable|ctkPathLineEdit::NoDot|ctkPathLineEdit::NoDotDot|ctkPathLineEdit::PermissionMask|ctkPathLineEdit::Readable|ctkPathLineEdit::Writable</set>
+          </property>
+          <property name="settingKey">
+           <string>OpenAnatomy/OutputFolder</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="outputModelHierarchyLabel">
+          <property name="text">
+           <string>(model hierarchy)</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="4" column="0" colspan="2">
+       <widget class="QPushButton" name="exportButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="toolTip">
+         <string>Export selected data to Gltf</string>
+        </property>
+        <property name="text">
+         <string>Export</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QPlainTextEdit" name="statusLabel">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="qMRMLSubjectHierarchyComboBox" name="inputSelector">
-     <property name="defaultText">
-      <string>Select segmentation node or model folder</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="toolTip">
-      <string>Decimation factor determining how much the mesh complexity will be reduced</string>
-     </property>
+   <item>
+    <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton_2">
      <property name="text">
-      <string>Reduction factor:</string>
+      <string>Image export</string>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="ctkSliderWidget" name="reductionFactorSliderWidget">
-     <property name="toolTip">
-      <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
-     </property>
-     <property name="singleStep">
-      <double>0.010000000000000</double>
-     </property>
-     <property name="pageStep">
-      <double>0.100000000000000</double>
-     </property>
-     <property name="minimum">
-      <double>0.000000000000000</double>
-     </property>
-     <property name="maximum">
-      <double>1.000000000000000</double>
-     </property>
-     <property name="value">
-      <double>0.900000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Output format:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QComboBox" name="outputFormatSelector">
-     <item>
-      <property name="text">
-       <string>glTF</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>OBJ</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>scene</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Output location:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="ctkPathLineEdit" name="outputFileFolderSelector">
-       <property name="filters">
-        <set>ctkPathLineEdit::Dirs|ctkPathLineEdit::Drives|ctkPathLineEdit::Executable|ctkPathLineEdit::NoDot|ctkPathLineEdit::NoDotDot|ctkPathLineEdit::PermissionMask|ctkPathLineEdit::Readable|ctkPathLineEdit::Writable</set>
-       </property>
-       <property name="settingKey">
-        <string>OpenAnatomy/OutputFolder</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="outputModelHierarchyLabel">
-       <property name="text">
-        <string>(model hierarchy)</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QPushButton" name="exportButton">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="toolTip">
-      <string>Export selected data to Gltf</string>
-     </property>
-     <property name="text">
-      <string>Export</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="QPlainTextEdit" name="statusLabel">
-     <property name="enabled">
+     <property name="collapsed">
       <bool>true</bool>
      </property>
-     <property name="textInteractionFlags">
-      <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
-     </property>
+     <layout class="QFormLayout" name="formLayout_3">
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Output format:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="imageOutputFormatSelector">
+        <item>
+         <property name="text">
+          <string>vti</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Output location:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="2">
+       <widget class="QPushButton" name="imageExportButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="toolTip">
+         <string>Export selected data to Gltf</string>
+        </property>
+        <property name="text">
+         <string>Export</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Image to export:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="qMRMLNodeComboBox" name="imageInputSelector">
+        <property name="nodeTypes">
+         <stringlist>
+          <string>vtkMRMLScalarVolumeNode</string>
+         </stringlist>
+        </property>
+        <property name="addEnabled">
+         <bool>false</bool>
+        </property>
+        <property name="editEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="renameEnabled">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="ctkPathLineEdit" name="imageOutputFileFolderSelector">
+        <property name="filters">
+         <set>ctkPathLineEdit::Dirs|ctkPathLineEdit::Drives|ctkPathLineEdit::Executable|ctkPathLineEdit::NoDot|ctkPathLineEdit::NoDotDot|ctkPathLineEdit::PermissionMask|ctkPathLineEdit::Readable|ctkPathLineEdit::Writable</set>
+        </property>
+        <property name="settingKey">
+         <string>OpenAnatomy/OutputFolder</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>ctkCollapsibleButton</class>
+   <extends>QWidget</extends>
+   <header>ctkCollapsibleButton.h</header>
+   <container>1</container>
+  </customwidget>
   <customwidget>
    <class>ctkComboBox</class>
    <extends>QComboBox</extends>
@@ -151,6 +254,17 @@
    <class>ctkSliderWidget</class>
    <extends>QWidget</extends>
    <header>ctkSliderWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLCollapsibleButton</class>
+   <extends>ctkCollapsibleButton</extends>
+   <header>qMRMLCollapsibleButton.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLNodeComboBox</class>
+   <extends>QWidget</extends>
+   <header>qMRMLNodeComboBox.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLSubjectHierarchyComboBox</class>
