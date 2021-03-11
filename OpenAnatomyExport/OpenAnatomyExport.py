@@ -264,7 +264,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       # outputFileName += dateTimeStr
       outputFilePathBase = os.path.join(outputFolder, outputFileName)
       if outputFormat == "glTF":
-        exporter = slicer.vtkGLTFExporter()
+        exporter = vtk.vtkGLTFExporter()
         exporter.SetFileName(outputFilePathBase+'.gltf')
         exporter.InlineDataOn() # save to single file
       elif outputFormat == "OBJ":

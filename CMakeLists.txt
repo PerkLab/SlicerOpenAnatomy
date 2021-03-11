@@ -19,7 +19,6 @@ include(${Slicer_USE_FILE})
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(GltfSupport)
 add_subdirectory(OpenAnatomyExport)
 ## NEXT_MODULE
 
