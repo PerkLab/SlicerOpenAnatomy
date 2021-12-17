@@ -1,5 +1,7 @@
 import os
+import re
 import unittest
+from unittest.runner import TextTestResult
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
@@ -89,7 +91,7 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
       reductionFactor = self.ui.reductionFactorSliderWidget.value
       outputFormat = self.ui.outputFormatSelector.currentText
       outputFolder = self.ui.inputSelector.currentItem() if outputFormat == "models" else self.ui.outputFileFolderSelector.currentPath
-      self.logic.exportModel(self.ui.inputSelector.currentItem(), reductionFactor, outputFormat, outputFolder)
+      self.logic.exportModel(self.ui.inputSelector.currentItem(), outputFolder, reductionFactor, outputFormat)
       self.addLog('Export successful.')
     except Exception as e:
       self.addLog("Error: {0}".format(str(e)))
@@ -136,11 +138,25 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
   def __init__(self):
     ScriptedLoadableModuleLogic.__init__(self)
     self.logCallback = None
+    self._exportToFile = True  # Save to files or just to the scene, normally on, maybe useful to turn off for debugging
+    self.reductionFactor = 0.9
+
+    self._outputShFolderItemId = None
+    self._numberOfExpectedModels = 0
+    self._numberOfProcessedModels = 0
+    self._renderer = None
+    self._renderWindow = None
+    self._decimationParameterNode = None
+    self._temporaryExportNodes = []  # temporary nodes used during exportModel
+    self._gltfNodes = []
+    self._gltfMeshes = []
+
 
   def addLog(self, text):
     logging.info(text)
     if self.logCallback:
       self.logCallback(text)
+
 
   def isValidInputOutputData(self, inputNode):
     """Validates if the output is not the same as input
@@ -150,18 +166,26 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       return False
     return True
 
-  def exportModel(self, inputItem, reductionFactor, outputFormat, outputFolder):
-    exportToFile = (outputFormat != "scene")
+
+  def exportModel(self, inputItem, outputFolder=None, reductionFactor=None, outputFormat=None):
+    if outputFormat is None:
+      outputFormat = "glTF"
+    if reductionFactor is not None:
+      self.reductionFactor = reductionFactor
+    self._exportToFile = (outputFormat != "scene")
+    if outputFolder is None:
+      if self._exportToFile:
+        raise ValueError("Output folder must be specified if output format is not 'scene'")
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-
     inputName = shNode.GetItemName(inputItem)
 
+    # Get input as a subject hierarchy folder
     owner = shNode.GetItemOwnerPluginName(inputItem)
     if owner == "Folder":
       # Input is already a model hiearachy
       inputShFolderItemId = inputItem
-      outputShFolderItemId = shNode.CreateFolderItem(shNode.GetSceneItemID(), inputName + " export")
+      self._outputShFolderItemId = shNode.CreateFolderItem(shNode.GetSceneItemID(), inputName + " export")
     elif owner == "Segmentations":
       # Export segmentation to model hierarchy
       segLogic = slicer.modules.segmentations.logic()
@@ -171,93 +195,21 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       self.addLog('Export segmentation to models. This may take a few minutes.')
       success = segLogic.ExportAllSegmentsToModels(inputSegmentationNode, inputShFolderItemId)
 
-      outputShFolderItemId = inputShFolderItemId
+      self._outputShFolderItemId = inputShFolderItemId
     else:
       raise ValueError("Input item must be a segmentation node or a folder containing model nodes")
 
-    inputNodes = vtk.vtkCollection()
-    shNode.GetDataNodesInBranch(inputItem, inputNodes, "vtkMRMLModelNode")
-
-    if exportToFile:
-      renderer = vtk.vtkRenderer()
-      renderWindow = vtk.vtkRenderWindow()
-      renderWindow.AddRenderer(renderer)
-
-    decimation = slicer.modules.decimation
-    decimationParameterNode = slicer.modules.decimation.logic().CreateNodeInScene()
-    decimationParameterNode.SetParameterAsFloat("reductionFactor", reductionFactor)
-
-    nodesToDelete = []
-    nodesToDelete.append(decimationParameterNode)
-
     modelNodes = vtk.vtkCollection()
     shNode.GetDataNodesInBranch(inputShFolderItemId, modelNodes, "vtkMRMLModelNode")
-    for modelNodeIndex in range(modelNodes.GetNumberOfItems()):
-      inputModelNode = modelNodes.GetItemAsObject(modelNodeIndex)
+    self._numberOfExpectedModels = modelNodes.GetNumberOfItems()
+    self._numberOfProcessedModels = 0
+    self._gltfNodes = []
+    self._gltfMeshes = []
 
-      self.addLog("Model {0}/{1}: {2}".format(modelNodeIndex+1, modelNodes.GetNumberOfItems(), inputModelNode.GetName()))
-      slicer.app.processEvents()
+    # Add models to a self._renderer
+    self.addModelsToRenderer(inputShFolderItemId)
 
-      existingOutputModelItemId = shNode.GetItemChildWithName(outputShFolderItemId, inputModelNode.GetName())
-      if existingOutputModelItemId:
-        outputModelNode = shNode.GetItemDataNode(existingOutputModelItemId)
-      else:
-        outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
-        outputModelNode.CreateDefaultDisplayNodes()
-        outputModelNode.SetName(inputModelNode.GetName())
-        outputModelNode.GetDisplayNode().CopyContent(inputModelNode.GetDisplayNode())
-        if exportToFile:
-          nodesToDelete.append(outputModelNode)
-
-      # Quadric decimation
-      if reductionFactor == 0.0:
-        outputModelNode.CopyContent(inputModelNode)
-      else:
-        decimationParameterNode.SetParameterAsNode("inputModel", inputModelNode)
-        decimationParameterNode.SetParameterAsNode("outputModel", outputModelNode)
-        slicer.cli.runSync(decimation, decimationParameterNode)
-
-      # Compute normals
-      decimatedNormals = vtk.vtkPolyDataNormals()
-      decimatedNormals.SetInputData(outputModelNode.GetPolyData())
-      decimatedNormals.SplittingOff()
-      decimatedNormals.Update()
-      outputModelNode.SetAndObservePolyData(decimatedNormals.GetOutput())
-
-      outputPolyData = outputModelNode.GetPolyData()
-      if outputPolyData.GetNumberOfPoints()==0 or outputPolyData.GetNumberOfCells()==0:
-        self.addLog("  Warning: empty model, not exported.")
-        continue
-
-      if exportToFile:
-
-        ras2lps = vtk.vtkMatrix4x4()
-        ras2lps.SetElement(0,0,-1)
-        ras2lps.SetElement(1,1,-1)
-        ras2lpsTransform = vtk.vtkTransform()
-        ras2lpsTransform.SetMatrix(ras2lps)
-        transformer = vtk.vtkTransformPolyDataFilter()
-        transformer.SetTransform(ras2lpsTransform)
-        transformer.SetInputConnection(outputModelNode.GetPolyDataConnection())
-
-        actor = vtk.vtkActor()
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(transformer.GetOutputPort())
-        actor.SetMapper(mapper)
-        displayNode = outputModelNode.GetDisplayNode()
-        color = displayNode.GetColor()
-        ambient = 0.1
-        diffuse = 0.9
-        specular = 0.2
-        actor.GetProperty().SetColor(color[0], color[1], color[2])
-        actor.GetProperty().SetAmbientColor(ambient * color[0], ambient * color[1], ambient * color[2])
-        actor.GetProperty().SetDiffuseColor(diffuse * color[0], diffuse * color[1], diffuse * color[2])
-        actor.GetProperty().SetSpecularColor(specular * color[0], specular * color[1], specular * color[2])
-        actor.GetProperty().SetSpecularPower(3.0)
-        actor.GetProperty().SetOpacity(displayNode.GetOpacity())
-        renderer.AddActor(actor)
-
-    if exportToFile:
+    if self._exportToFile:
       outputFileName = inputName
       # import datetime
       # dateTimeStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -265,15 +217,58 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       outputFilePathBase = os.path.join(outputFolder, outputFileName)
       if outputFormat == "glTF":
         exporter = vtk.vtkGLTFExporter()
-        exporter.SetFileName(outputFilePathBase+'.gltf')
-        exporter.InlineDataOn() # save to single file
+        outputFilePath = outputFilePathBase+'.gltf'
+        exporter.SetFileName(outputFilePath)
+        exporter.InlineDataOn()  # save to single file
+        exporter.SaveNormalOn()  # save surface normals
       elif outputFormat == "OBJ":
         exporter = vtk.vtkOBJExporter()
+        outputFilePath = outputFilePathBase + '.obj'
         exporter.SetFilePrefix(outputFilePathBase)
       else:
         raise ValueError("Output format must be scene, glTF, or OBJ")
-      exporter.SetRenderWindow(renderWindow)
+
+      self.addLog(f"Writing file {outputFilePath}...")
+      exporter.SetRenderWindow(self._renderWindow)
       exporter.Write()
+
+      if outputFormat == "glTF":
+
+        # Fix up the VTK-generated glTF file
+
+        import json
+        with open(outputFilePath, 'r') as f:
+          jsonData = json.load(f)
+
+        # Update mesh names
+        for meshIndex, mesh in enumerate(self._gltfMeshes):
+          jsonData['meshes'][meshIndex]['name'] = mesh['name']
+
+        # VTK uses "OPAQUE" alpha mode for all meshes, which would make all nodes appear opaque.
+        # Replace alpha mode by "BLEND" for semi-transparent meshes.
+        for material in jsonData['materials']:
+          rgbaColor = material['pbrMetallicRoughness']['baseColorFactor']
+          if rgbaColor[3] < 1.0:
+            material['alphaMode'] = 'BLEND'
+
+        # Add camera nodes from the VTK-exported file
+        for node in enumerate(self._gltfNodes):
+          if 'camera' in node:
+            self._gltfNodes.append(node)
+
+        # Replace the entire hierarchy
+        jsonData['nodes'] = self._gltfNodes
+
+        # The scene root is the last node in the self._gltfNodes list
+        jsonData['scenes'][0]['nodes'] = [len(self._gltfNodes)-1]
+
+        with open(outputFilePath, 'w') as f:
+          f.write(json.dumps(jsonData, indent=3))
+
+        # TODO:
+        # - Add scene view states as scenes
+        # - Add option to change up vector (glTF defines the y axis as up, https://github.com/KhronosGroup/glTF/issues/1043
+        #   https://castle-engine.io/manual_up.php)
 
     # # Preview
     # iren = vtk.vtkRenderWindowInteractor()
@@ -285,11 +280,18 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     # iren.Start()
 
     # Remove temporary nodes
-    for node in nodesToDelete:
+    for node in self._temporaryExportNodes:
       slicer.mrmlScene.RemoveNode(node)
+    self._temporaryExportNodes = []
 
-    if exportToFile:
-      shNode.RemoveItem(outputShFolderItemId)
+    self._numberOfExpectedModels = 0
+    self._numberOfProcessedModels = 0
+    self._renderer = None
+    self._renderWindow = None
+    self._decimationParameterNode = None
+
+    if self._exportToFile:
+      shNode.RemoveItem(self._outputShFolderItemId)
 
   def exportImage(self, volumeNode, outputFormat, outputFolder):
     writer=vtk.vtkXMLImageDataWriter()
@@ -298,6 +300,166 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     writer.SetCompressorTypeToZLib()
     writer.Write()
 
+
+  def addModelsToRenderer(self, shFolderItemId):
+    if not shFolderItemId:
+      raise ValueError("Subject hierarchy folder does not exist.")
+
+    gltfFolderNodeChildren = []  # gltf node indices of these item's children
+
+    if self._exportToFile:
+      if not self._renderer:
+        self._renderer = vtk.vtkRenderer()
+      if not self._renderWindow:
+        self._renderWindow = vtk.vtkRenderWindow()
+        self._renderWindow.AddRenderer(self._renderer)
+
+    slicer.app.pauseRender()
+    try:
+
+      shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+      folderName = shNode.GetItemName(shFolderItemId)
+      self.addLog(f"Writing {folderName}...")
+
+      # Write all children of this item (recursively)
+      childIds = vtk.vtkIdList()
+      shNode.GetItemChildren(shFolderItemId, childIds)
+      for itemIdIndex in range(childIds.GetNumberOfIds()):
+        shItemId = childIds.GetId(itemIdIndex)
+        dataNode = shNode.GetItemDataNode(shItemId)
+        if dataNode and dataNode.IsA("vtkMRMLModelNode"):
+          inputModelNode = dataNode
+          meshName = dataNode.GetName()
+          self._numberOfProcessedModels += 1
+          self.addLog("Model {0}/{1}: {2}".format(self._numberOfProcessedModels, self._numberOfExpectedModels, meshName))
+
+          # Reuse existing model node if already exists
+          existingOutputModelItemId = shNode.GetItemChildWithName(self._outputShFolderItemId, inputModelNode.GetName())
+          if existingOutputModelItemId:
+            outputModelNode = shNode.GetItemDataNode(existingOutputModelItemId)
+          else:
+            outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+            outputModelNode.CreateDefaultDisplayNodes()
+            outputModelNode.SetName(inputModelNode.GetName())
+            outputModelNode.GetDisplayNode().CopyContent(inputModelNode.GetDisplayNode())
+            if self._exportToFile:
+              self._temporaryExportNodes.append(outputModelNode)
+
+          if self.addModelToRenderer(inputModelNode, outputModelNode):
+
+            # Convert atlas model names (such as 'Model_505_left_lateral_geniculate_body') to simple names
+            # by stripping the prefix and converting underscore to space.
+            match = re.match(r'^Model_[0-9]+_(.+)', meshName)
+            if match:
+              meshName = match.groups()[0].replace('_', ' ')
+
+            gltfMeshIndex = len(self._gltfMeshes)
+            self._gltfMeshes.append({'name': meshName})
+            gltfMeshNodeIndex = len(self._gltfNodes)
+            self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
+            gltfFolderNodeChildren.append(gltfMeshNodeIndex)
+
+        # Write all children of this child item
+        grandChildIds = vtk.vtkIdList()
+        shNode.GetItemChildren(shItemId, grandChildIds)
+        if grandChildIds.GetNumberOfIds() > 0:
+          self.addModelsToRenderer(shItemId)
+          # added highest-level parent folder is the last node
+          gltfFolderNodeIndex = len(self._gltfNodes)-1
+          gltfFolderNodeChildren.append(gltfFolderNodeIndex)
+
+      # Processed all items in the folder, now save the folder information
+      self._gltfNodes.append({'name': folderName, 'children': gltfFolderNodeChildren})
+
+    finally:
+      slicer.app.resumeRender()
+
+
+  def addModelToRenderer(self, inputModelNode, outputModelNode):
+    '''Update output model in the scene and if valid add to self._renderer.
+    :return: True if an actor is added to the renderer.
+    '''
+    decimation = slicer.modules.decimation
+    if not self._decimationParameterNode:
+      self._decimationParameterNode = slicer.modules.decimation.logic().CreateNodeInScene()
+      self._decimationParameterNode.SetParameterAsFloat("reductionFactor", self.reductionFactor)
+      self._temporaryExportNodes.append(self._decimationParameterNode)
+
+    # Quadric decimation
+    if self.reductionFactor == 0.0:
+      outputModelNode.CopyContent(inputModelNode)
+    else:
+      
+      # Temporary workaround (part 1/2):
+      # VTK 9.0 OBJ writer creates invalid OBJ file if there are triangle
+      # strips and normals but no texture coords.
+      # As a workaround, temporarily remove point normals in this case.
+      # This workaround can be removed when Slicer's VTK includes this fix:
+      # https://gitlab.kitware.com/vtk/vtk/-/merge_requests/8747
+      if (inputModelNode.GetPolyData().GetNumberOfStrips() > 0
+          and inputModelNode.GetPolyData().GetPointData()
+          and inputModelNode.GetPolyData().GetPointData().GetNormals()
+          and not inputModelNode.GetPolyData().GetPointData().GetTCoords()):
+        # Save original normals and temporarily remove normals
+        originalNormals = inputModelNode.GetPolyData().GetPointData().GetNormals()
+        inputModelNode.GetPolyData().GetPointData().SetNormals(None)
+      else:
+        originalNormals = None
+
+      self._decimationParameterNode.SetParameterAsNode("inputModel", inputModelNode)
+      self._decimationParameterNode.SetParameterAsNode("outputModel", outputModelNode)
+      slicer.cli.runSync(decimation, self._decimationParameterNode)
+
+      # Temporary workaround (part 2/2):
+      # Restore original normals.
+      if originalNormals:
+        inputModelNode.GetPolyData().GetPointData().SetNormals(originalNormals)
+
+    # Compute normals
+    decimatedNormals = vtk.vtkPolyDataNormals()
+    decimatedNormals.SetInputData(outputModelNode.GetPolyData())
+    decimatedNormals.SplittingOff()
+    decimatedNormals.Update()
+    outputPolyData = decimatedNormals.GetOutput()
+
+    if outputPolyData.GetNumberOfPoints()==0 or outputPolyData.GetNumberOfCells()==0:
+      self.addLog("  Warning: empty model, not exported.")
+      return False
+
+    if not self._exportToFile:
+      return True
+
+    # Normal array name is hardcoded into glTF exporter to "NORMAL"
+    outputPolyData.GetPointData().GetNormals().SetName("NORMAL")
+    outputModelNode.SetAndObservePolyData(outputPolyData)
+
+    ras2lps = vtk.vtkMatrix4x4()
+    ras2lps.SetElement(0,0,-1)
+    ras2lps.SetElement(1,1,-1)
+    ras2lpsTransform = vtk.vtkTransform()
+    ras2lpsTransform.SetMatrix(ras2lps)
+    transformer = vtk.vtkTransformPolyDataFilter()
+    transformer.SetTransform(ras2lpsTransform)
+    transformer.SetInputConnection(outputModelNode.GetPolyDataConnection())
+
+    actor = vtk.vtkActor()
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(transformer.GetOutputPort())
+    actor.SetMapper(mapper)
+    displayNode = outputModelNode.GetDisplayNode()
+    color = displayNode.GetColor()
+    ambient = 0.1
+    diffuse = 0.5
+    specular = 0.2
+    actor.GetProperty().SetColor(color[0], color[1], color[2])
+    actor.GetProperty().SetAmbientColor(ambient * color[0], ambient * color[1], ambient * color[2])
+    actor.GetProperty().SetDiffuseColor(diffuse * color[0], diffuse * color[1], diffuse * color[2])
+    actor.GetProperty().SetSpecularColor(specular * color[0], specular * color[1], specular * color[2])
+    actor.GetProperty().SetSpecularPower(3.0)
+    actor.GetProperty().SetOpacity(displayNode.GetOpacity())
+    self._renderer.AddActor(actor)
+
+    return True
 
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
