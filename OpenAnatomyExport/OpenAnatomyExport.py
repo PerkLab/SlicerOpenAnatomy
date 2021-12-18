@@ -58,7 +58,7 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     self.ui.outputFormatSelector.connect("currentIndexChanged(int)", self.onSelect)
 
     self.ui.imageExportButton.connect('clicked(bool)', self.onImageExportButton)
-    self.ui.imageInputSelector.connect("currentItemChanged(vtkIdType)", self.onSelect)
+    self.ui.imageInputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.ui.imageOutputFormatSelector.connect("currentIndexChanged(int)", self.onSelect)
 
     # Add vertical spacer
@@ -259,8 +259,20 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         # Replace the entire hierarchy
         jsonData['nodes'] = self._gltfNodes
 
+        # Set up root node
+        rootNodeIndex = len(self._gltfNodes)-1
+
+        # View up direction in glTF is +Y.
+        # We map that to anatomical S direction by this transform (LSA coordinate system).
+        jsonData['nodes'][rootNodeIndex]['matrix'] = [
+            1.0,    0.0,    0.0,    0.0,
+            0.0,    0.0,   -1.0,    0.0,
+            0.0,    1.0,    0.0,    0.0,
+            0.0,    0.0,    0.0,    1.0
+        ]
+
         # The scene root is the last node in the self._gltfNodes list
-        jsonData['scenes'][0]['nodes'] = [len(self._gltfNodes)-1]
+        jsonData['scenes'][0]['nodes'] = [rootNodeIndex]
 
         with open(outputFilePath, 'w') as f:
           f.write(json.dumps(jsonData, indent=3))
