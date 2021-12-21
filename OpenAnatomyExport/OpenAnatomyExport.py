@@ -269,10 +269,12 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             0.0,    0.0,   -1.0,    0.0,
             0.0,    1.0,    0.0,    0.0,
             0.0,    0.0,    0.0,    1.0
-        ]
+            ]
 
         # The scene root is the last node in the self._gltfNodes list
         jsonData['scenes'][0]['nodes'] = [rootNodeIndex]
+
+        jsonData['asset']['generator'] = f"{slicer.app.applicationName} {slicer.app.applicationVersion}"
 
         with open(outputFilePath, 'w') as f:
           f.write(json.dumps(jsonData, indent=3))
