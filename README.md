@@ -8,6 +8,16 @@ This module exports a model hierarchy or segmentation node from 3D Slicer into a
 
 ![OpenAnatomy Exporter module screenshot](Screenshot03.png)
 
+## Quick start
+
+- Install `3D Slicer` and the `SlicerOpenAnatomy` extension
+- Create/edit a segmentation using `Segment Editor` module
+- Export the segmentation to glTF file using `OpenAnatomy Export` module
+- Upload your model to Dropbox or GitHub and get a download link
+- Create a view link by prepending `https://3dviewer.net/#model=` to the download link. The model can be viewed in 3D in the web browser on computers, tablets, and phones.
+
+Example view link: https://3dviewer.net/#model=https://www.dropbox.com/s/38arwo2uhzu0ydg/SPL-Abdominal-Atlas.gltf?dl=0
+
 ## glTF viewers
 
 - Online (in web browser):
