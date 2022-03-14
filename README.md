@@ -57,3 +57,13 @@ Embed 3dviewer.net in a website:
 src="https://3dviewer.net/embed.html#model=https://raw.githubusercontent.com/lassoan/Test/master/SPL-Abdominal-Atlas.gltf">
 </iframe>
 ```
+
+## Export options
+
+- Segmentation to export: Select a segmentation or a subject hierarchy folder that contains models. If a folder is exported into glTF format then the folder hierarchy is preserved in the output file.
+- Reduction factor: Amount of size reduction. Larger value means more reduction therefore smaller file. Factor of 0.95 means the size is reduced by 95% (output file size is 5% of the original file size).
+- Output format
+  - glTF: Export to glTF file format. Supported by many web viewers. Model names, hierarchy, color, and transparency information is preserved. Models that use Flat, Gouraud, or Phong interpolation in Slicer (see Models module / 3D display / Advanced) are converted to PBR interpolation during export (because glTF format uses PBR interpolation). Since these interpolation modes are not equivalent, the color and surface appearance will be slightly different in glTF viewers compared to what was shown in Slicer. For more accurate color correspondence, switch to PBR interpolation in Slicer (and it is recommended to enable `Image-based lighting` in `Lights` module in `SlicerSandbox` extension).
+  - OBJ: Wavefront OBJ file format. Model color and transparency information is preserved.
+  - scene: Export the models into the scene.
+- Output location: folder where the output file will be written to. Filename is determined automatically from the selected segmentation or subject hierarchy folder node name.

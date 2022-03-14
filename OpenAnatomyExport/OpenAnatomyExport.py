@@ -141,6 +141,14 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     self._exportToFile = True  # Save to files or just to the scene, normally on, maybe useful to turn off for debugging
     self.reductionFactor = 0.9
 
+    # Slicer uses Gouraud lighting model by default, while glTF requires PBR.
+    # Material properties conversion in VTK makes the model appear in glTF very dull, faded out,
+    # therefore if we export models with Gouraud lighting we adjust the saturation and brightness.
+    # By testing on a few anatomical atlases, saturation increase by 1.5x and no brightness
+    # change seems to be working well.
+    self.saturationBoost = 1.5
+    self.brightnessBoost = 1.0
+
     self._outputShFolderItemId = None
     self._numberOfExpectedModels = 0
     self._numberOfProcessedModels = 0
@@ -207,7 +215,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     self._gltfMeshes = []
 
     # Add models to a self._renderer
-    self.addModelsToRenderer(inputShFolderItemId)
+    self.addModelsToRenderer(inputShFolderItemId, boostGouraudColor = (outputFormat == "glTF"))
 
     if self._exportToFile:
       outputFileName = inputName
@@ -315,7 +323,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     writer.Write()
 
 
-  def addModelsToRenderer(self, shFolderItemId):
+  def addModelsToRenderer(self, shFolderItemId, boostGouraudColor=False):
     if not shFolderItemId:
       raise ValueError("Subject hierarchy folder does not exist.")
 
@@ -359,7 +367,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             if self._exportToFile:
               self._temporaryExportNodes.append(outputModelNode)
 
-          if self.addModelToRenderer(inputModelNode, outputModelNode):
+          if self.addModelToRenderer(inputModelNode, outputModelNode, boostGouraudColor):
 
             # Convert atlas model names (such as 'Model_505_left_lateral_geniculate_body') to simple names
             # by stripping the prefix and converting underscore to space.
@@ -377,7 +385,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         grandChildIds = vtk.vtkIdList()
         shNode.GetItemChildren(shItemId, grandChildIds)
         if grandChildIds.GetNumberOfIds() > 0:
-          self.addModelsToRenderer(shItemId)
+          self.addModelsToRenderer(shItemId, boostGouraudColor)
           # added highest-level parent folder is the last node
           gltfFolderNodeIndex = len(self._gltfNodes)-1
           gltfFolderNodeChildren.append(gltfFolderNodeIndex)
@@ -389,7 +397,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       slicer.app.resumeRender()
 
 
-  def addModelToRenderer(self, inputModelNode, outputModelNode):
+  def addModelToRenderer(self, inputModelNode, outputModelNode, boostGouraudColor=False):
     '''Update output model in the scene and if valid add to self._renderer.
     :return: True if an actor is added to the renderer.
     '''
@@ -461,15 +469,29 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     mapper.SetInputConnection(transformer.GetOutputPort())
     actor.SetMapper(mapper)
     displayNode = outputModelNode.GetDisplayNode()
-    color = displayNode.GetColor()
-    ambient = 0.1
-    diffuse = 0.5
-    specular = 0.2
-    actor.GetProperty().SetColor(color[0], color[1], color[2])
-    actor.GetProperty().SetAmbientColor(ambient * color[0], ambient * color[1], ambient * color[2])
-    actor.GetProperty().SetDiffuseColor(diffuse * color[0], diffuse * color[1], diffuse * color[2])
-    actor.GetProperty().SetSpecularColor(specular * color[0], specular * color[1], specular * color[2])
-    actor.GetProperty().SetSpecularPower(3.0)
+
+    colorRGB = displayNode.GetColor()
+    if displayNode.GetInterpolation() == slicer.vtkMRMLDisplayNode.PBRInterpolation:
+      actor.GetProperty().SetColor(colorRGB[0], colorRGB[1], colorRGB[2])
+      actor.GetProperty().SetInterpolationToPBR()
+      actor.GetProperty().SetMetallic(displayNode.GetMetallic())
+      actor.GetProperty().SetRoughness(displayNode.GetRoughness())
+    else:
+      if boostGouraudColor:
+        bf = colorRGB
+        colorHSV = [0, 0, 0]
+        vtk.vtkMath.RGBToHSV(colorRGB, colorHSV)
+        colorHSV[1] = min(colorHSV[1] * self.saturationBoost, 1.0)  # increase saturation
+        colorHSV[2] = min(colorHSV[2] * self.brightnessBoost, 1.0)  # increase brightness
+        colorRGB = [0, 0, 0]
+        vtk.vtkMath.HSVToRGB(colorHSV, colorRGB)
+      actor.GetProperty().SetColor(colorRGB[0], colorRGB[1], colorRGB[2])
+      actor.GetProperty().SetInterpolationToGouraud()
+      actor.GetProperty().SetAmbient(displayNode.GetAmbient())
+      actor.GetProperty().SetDiffuse(displayNode.GetDiffuse())
+      actor.GetProperty().SetSpecular(displayNode.GetSpecular())
+      actor.GetProperty().SetSpecularPower(displayNode.GetPower())
+
     actor.GetProperty().SetOpacity(displayNode.GetOpacity())
     self._renderer.AddActor(actor)
 
