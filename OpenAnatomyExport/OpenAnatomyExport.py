@@ -408,10 +408,12 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       self._temporaryExportNodes.append(self._decimationParameterNode)
 
     # Quadric decimation
-    if self.reductionFactor == 0.0:
+    if (self.reductionFactor == 0.0) or (inputModelNode.GetPolyData().GetNumberOfPoints() < 50):
+      # Models with very small number of points are not decimated, as the memory saving is
+      # negligible and the models may become severely distorted.
       outputModelNode.CopyContent(inputModelNode)
     else:
-      
+
       # Temporary workaround (part 1/2):
       # VTK 9.0 OBJ writer creates invalid OBJ file if there are triangle
       # strips and normals but no texture coords.
