@@ -351,11 +351,11 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       for itemIdIndex in range(childIds.GetNumberOfIds()):
         shItemId = childIds.GetId(itemIdIndex)
         dataNode = shNode.GetItemDataNode(shItemId)
-        if (
-          dataNode and (
-            dataNode.IsA("vtkMRMLModelNode") or dataNode.IsA("vtkMRMLMarkupsPlaneNode")
-            )
-          ):
+        dataNotNone = dataNode is not None
+        isModel = dataNotNone and dataNode.IsA("vtkMRMLModelNode")
+        isMarkupsPlane = dataNotNone and dataNode.IsA("vtkMRMLMarkupsPlaneNode")
+        dataIsValid = (isModel or isMarkupsPlane)
+        if dataIsValid:
           if dataNode.IsA("vtkMRMLModelNode"):
             inputModelNode = dataNode
           else:
@@ -526,8 +526,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     # Copy props from markups to model
     planeMarkupDisplayNode = planeMarkup.GetDisplayNode()
     planeModelDisplayNode = planeModel.GetDisplayNode()
-    planeColor = planeMarkupDisplayNode.GetSelectedColor()
-    planeModelDisplayNode.SetColor(planeColor)
+    planeModelDisplayNode.SetColor(planeMarkupDisplayNode.GetSelectedColor())
     planeOpacity = planeMarkupDisplayNode.GetFillOpacity()
     planeModelDisplayNode.SetOpacity(planeOpacity)
     planeModel.SetName(planeMarkup.GetName())
