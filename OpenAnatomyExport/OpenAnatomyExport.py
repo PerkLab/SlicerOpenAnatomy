@@ -209,7 +209,9 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     modelNodes = vtk.vtkCollection()
     shNode.GetDataNodesInBranch(inputShFolderItemId, modelNodes, "vtkMRMLModelNode")
-    self._numberOfExpectedModels = modelNodes.GetNumberOfItems()
+    planeNodes = vtk.vtkCollection()
+    shNode.GetDataNodesInBranch(inputShFolderItemId, planeNodes, "vtkMRMLMarkupsPlaneNode")
+    self._numberOfExpectedModels = modelNodes.GetNumberOfItems() + planeNodes.GetNumberOfItems()
     self._numberOfProcessedModels = 0
     self._gltfNodes = []
     self._gltfMeshes = []
@@ -380,6 +382,40 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             gltfMeshNodeIndex = len(self._gltfNodes)
             self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
             gltfFolderNodeChildren.append(gltfMeshNodeIndex)
+          
+        if dataNode and dataNode.IsA("vtkMRMLMarkupsPlaneNode"):
+          inputModelNode = self.createPlaneModelFromMarkupsPlane(dataNode)
+          meshName = dataNode.GetName()
+          self._numberOfProcessedModels += 1
+          self.addLog("Model {0}/{1}: {2}".format(self._numberOfProcessedModels, self._numberOfExpectedModels, meshName))
+
+          # Reuse existing model node if already exists
+          existingOutputModelItemId = shNode.GetItemChildWithName(self._outputShFolderItemId, inputModelNode.GetName())
+          if existingOutputModelItemId:
+            outputModelNode = shNode.GetItemDataNode(existingOutputModelItemId)
+          else:
+            outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+            outputModelNode.CreateDefaultDisplayNodes()
+            outputModelNode.SetName(inputModelNode.GetName())
+            outputModelNode.GetDisplayNode().CopyContent(inputModelNode.GetDisplayNode())
+            if self._exportToFile:
+              self._temporaryExportNodes.append(outputModelNode)
+
+          if self.addModelToRenderer(inputModelNode, outputModelNode, boostGouraudColor):
+
+            # Convert atlas model names (such as 'Model_505_left_lateral_geniculate_body') to simple names
+            # by stripping the prefix and converting underscore to space.
+            match = re.match(r'^Model_[0-9]+_(.+)', meshName)
+            if match:
+              meshName = match.groups()[0].replace('_', ' ')
+
+            gltfMeshIndex = len(self._gltfMeshes)
+            self._gltfMeshes.append({'name': meshName})
+            gltfMeshNodeIndex = len(self._gltfNodes)
+            self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
+            gltfFolderNodeChildren.append(gltfMeshNodeIndex)
+          
+          slicer.mrmlScene.RemoveNode(inputModelNode)
 
         # Write all children of this child item
         grandChildIds = vtk.vtkIdList()
@@ -499,6 +535,45 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     return True
 
+  def createPlaneModelFromMarkupsPlane(self,planeMarkup):
+    cornerPoints = vtk.vtkPoints()
+    planeMarkup.GetPlaneCornerPoints(cornerPoints)
+
+    from vtk.util.numpy_support import vtk_to_numpy
+    cornerPoints_np = vtk_to_numpy(cornerPoints.GetData())
+
+    import numpy as np
+    def sort_points(pts):
+        """Sort 4 points in a winding order"""
+        pts = np.array(pts)
+        centroid = np.sum(pts, axis=0) / pts.shape[0]
+        vector_from_centroid = pts - centroid
+        vector_angle = np.arctan2(
+            vector_from_centroid[:, 1], vector_from_centroid[:, 0])
+        # Find the indices that give a sorted vector_angle array
+        sort_order = np.argsort(-vector_angle)
+        # Apply sort_order to original pts array.
+        return list(sort_order)
+
+    order = sort_points(cornerPoints_np)
+
+    # Create polygonal mesh model that can be saved as ply, obj, stl,... file
+    planeSource = vtk.vtkPlaneSource()
+    planeSource.SetOrigin(cornerPoints_np[order[0]])
+    planeSource.SetPoint1(cornerPoints_np[order[1]])
+    planeSource.SetPoint2(cornerPoints_np[order[-1]])
+    planeModel = slicer.modules.models.logic().AddModel(planeSource.GetOutputPort())
+
+    # Copy props from markups to model
+    planeMarkupDisplayNode = planeMarkup.GetDisplayNode()
+    planeModelDisplayNode = planeModel.GetDisplayNode()
+    planeColor = planeMarkupDisplayNode.GetSelectedColor()
+    planeModelDisplayNode.SetColor(planeColor)
+    planeOpacity = planeMarkupDisplayNode.GetFillOpacity()
+    planeModelDisplayNode.SetOpacity(planeOpacity)
+    planeModel.SetName(planeMarkup.GetName())
+
+    return planeModel
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
   """
