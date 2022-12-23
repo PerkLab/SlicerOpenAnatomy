@@ -351,8 +351,15 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       for itemIdIndex in range(childIds.GetNumberOfIds()):
         shItemId = childIds.GetId(itemIdIndex)
         dataNode = shNode.GetItemDataNode(shItemId)
-        if dataNode and dataNode.IsA("vtkMRMLModelNode"):
-          inputModelNode = dataNode
+        if (
+          dataNode and (
+            dataNode.IsA("vtkMRMLModelNode") or dataNode.IsA("vtkMRMLMarkupsPlaneNode")
+            )
+          ):
+          if dataNode.IsA("vtkMRMLModelNode"):
+            inputModelNode = dataNode
+          else:
+            inputModelNode = self.createPlaneModelFromMarkupsPlane(dataNode)
           meshName = dataNode.GetName()
           self._numberOfProcessedModels += 1
           self.addLog("Model {0}/{1}: {2}".format(self._numberOfProcessedModels, self._numberOfExpectedModels, meshName))
@@ -383,39 +390,8 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
             gltfFolderNodeChildren.append(gltfMeshNodeIndex)
           
-        if dataNode and dataNode.IsA("vtkMRMLMarkupsPlaneNode"):
-          inputModelNode = self.createPlaneModelFromMarkupsPlane(dataNode)
-          meshName = dataNode.GetName()
-          self._numberOfProcessedModels += 1
-          self.addLog("Model {0}/{1}: {2}".format(self._numberOfProcessedModels, self._numberOfExpectedModels, meshName))
-
-          # Reuse existing model node if already exists
-          existingOutputModelItemId = shNode.GetItemChildWithName(self._outputShFolderItemId, inputModelNode.GetName())
-          if existingOutputModelItemId:
-            outputModelNode = shNode.GetItemDataNode(existingOutputModelItemId)
-          else:
-            outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
-            outputModelNode.CreateDefaultDisplayNodes()
-            outputModelNode.SetName(inputModelNode.GetName())
-            outputModelNode.GetDisplayNode().CopyContent(inputModelNode.GetDisplayNode())
-            if self._exportToFile:
-              self._temporaryExportNodes.append(outputModelNode)
-
-          if self.addModelToRenderer(inputModelNode, outputModelNode, boostGouraudColor):
-
-            # Convert atlas model names (such as 'Model_505_left_lateral_geniculate_body') to simple names
-            # by stripping the prefix and converting underscore to space.
-            match = re.match(r'^Model_[0-9]+_(.+)', meshName)
-            if match:
-              meshName = match.groups()[0].replace('_', ' ')
-
-            gltfMeshIndex = len(self._gltfMeshes)
-            self._gltfMeshes.append({'name': meshName})
-            gltfMeshNodeIndex = len(self._gltfNodes)
-            self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
-            gltfFolderNodeChildren.append(gltfMeshNodeIndex)
-          
-          slicer.mrmlScene.RemoveNode(inputModelNode)
+          if dataNode and dataNode.IsA("vtkMRMLMarkupsPlaneNode"):
+            slicer.mrmlScene.RemoveNode(inputModelNode)
 
         # Write all children of this child item
         grandChildIds = vtk.vtkIdList()
@@ -536,32 +512,15 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     return True
 
   def createPlaneModelFromMarkupsPlane(self,planeMarkup):
-    cornerPoints = vtk.vtkPoints()
-    planeMarkup.GetPlaneCornerPoints(cornerPoints)
+    planeBounds = planeMarkup.GetPlaneBounds()
+    objectToWorld = vtk.vtkMatrix4x4()
+    planeMarkup.GetObjectToWorldMatrix(objectToWorld)
 
-    from vtk.util.numpy_support import vtk_to_numpy
-    cornerPoints_np = vtk_to_numpy(cornerPoints.GetData())
-
-    import numpy as np
-    def sort_points(pts):
-        """Sort 4 points in a winding order"""
-        pts = np.array(pts)
-        centroid = np.sum(pts, axis=0) / pts.shape[0]
-        vector_from_centroid = pts - centroid
-        vector_angle = np.arctan2(
-            vector_from_centroid[:, 1], vector_from_centroid[:, 0])
-        # Find the indices that give a sorted vector_angle array
-        sort_order = np.argsort(-vector_angle)
-        # Apply sort_order to original pts array.
-        return list(sort_order)
-
-    order = sort_points(cornerPoints_np)
-
-    # Create polygonal mesh model that can be saved as ply, obj, stl,... file
+    # Create plane polydata
     planeSource = vtk.vtkPlaneSource()
-    planeSource.SetOrigin(cornerPoints_np[order[0]])
-    planeSource.SetPoint1(cornerPoints_np[order[1]])
-    planeSource.SetPoint2(cornerPoints_np[order[-1]])
+    planeSource.SetOrigin(objectToWorld.MultiplyPoint([planeBounds[0], planeBounds[2], 0.0, 1.0])[0:3])
+    planeSource.SetPoint1(objectToWorld.MultiplyPoint([planeBounds[1], planeBounds[2], 0.0, 1.0])[0:3])
+    planeSource.SetPoint2(objectToWorld.MultiplyPoint([planeBounds[0], planeBounds[3], 0.0, 1.0])[0:3])
     planeModel = slicer.modules.models.logic().AddModel(planeSource.GetOutputPort())
 
     # Copy props from markups to model
