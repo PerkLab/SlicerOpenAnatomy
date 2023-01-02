@@ -209,7 +209,9 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     modelNodes = vtk.vtkCollection()
     shNode.GetDataNodesInBranch(inputShFolderItemId, modelNodes, "vtkMRMLModelNode")
-    self._numberOfExpectedModels = modelNodes.GetNumberOfItems()
+    planeNodes = vtk.vtkCollection()
+    shNode.GetDataNodesInBranch(inputShFolderItemId, planeNodes, "vtkMRMLMarkupsPlaneNode")
+    self._numberOfExpectedModels = modelNodes.GetNumberOfItems() + planeNodes.GetNumberOfItems()
     self._numberOfProcessedModels = 0
     self._gltfNodes = []
     self._gltfMeshes = []
@@ -349,8 +351,15 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       for itemIdIndex in range(childIds.GetNumberOfIds()):
         shItemId = childIds.GetId(itemIdIndex)
         dataNode = shNode.GetItemDataNode(shItemId)
-        if dataNode and dataNode.IsA("vtkMRMLModelNode"):
-          inputModelNode = dataNode
+        dataNotNone = dataNode is not None
+        isModel = dataNotNone and dataNode.IsA("vtkMRMLModelNode")
+        isMarkupsPlane = dataNotNone and dataNode.IsA("vtkMRMLMarkupsPlaneNode")
+        dataIsValid = (isModel or isMarkupsPlane)
+        if dataIsValid:
+          if dataNode.IsA("vtkMRMLModelNode"):
+            inputModelNode = dataNode
+          else:
+            inputModelNode = self.createPlaneModelFromMarkupsPlane(dataNode)
           meshName = dataNode.GetName()
           self._numberOfProcessedModels += 1
           self.addLog("Model {0}/{1}: {2}".format(self._numberOfProcessedModels, self._numberOfExpectedModels, meshName))
@@ -380,6 +389,9 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             gltfMeshNodeIndex = len(self._gltfNodes)
             self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
             gltfFolderNodeChildren.append(gltfMeshNodeIndex)
+          
+          if dataNode and dataNode.IsA("vtkMRMLMarkupsPlaneNode"):
+            slicer.mrmlScene.RemoveNode(inputModelNode)
 
         # Write all children of this child item
         grandChildIds = vtk.vtkIdList()
@@ -499,6 +511,27 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     return True
 
+  def createPlaneModelFromMarkupsPlane(self,planeMarkup):
+    planeBounds = planeMarkup.GetPlaneBounds()
+    objectToWorld = vtk.vtkMatrix4x4()
+    planeMarkup.GetObjectToWorldMatrix(objectToWorld)
+
+    # Create plane polydata
+    planeSource = vtk.vtkPlaneSource()
+    planeSource.SetOrigin(objectToWorld.MultiplyPoint([planeBounds[0], planeBounds[2], 0.0, 1.0])[0:3])
+    planeSource.SetPoint1(objectToWorld.MultiplyPoint([planeBounds[1], planeBounds[2], 0.0, 1.0])[0:3])
+    planeSource.SetPoint2(objectToWorld.MultiplyPoint([planeBounds[0], planeBounds[3], 0.0, 1.0])[0:3])
+    planeModel = slicer.modules.models.logic().AddModel(planeSource.GetOutputPort())
+
+    # Copy props from markups to model
+    planeMarkupDisplayNode = planeMarkup.GetDisplayNode()
+    planeModelDisplayNode = planeModel.GetDisplayNode()
+    planeModelDisplayNode.SetColor(planeMarkupDisplayNode.GetSelectedColor())
+    planeOpacity = planeMarkupDisplayNode.GetFillOpacity()
+    planeModelDisplayNode.SetOpacity(planeOpacity)
+    planeModel.SetName(planeMarkup.GetName())
+
+    return planeModel
 
 class OpenAnatomyExportTest(ScriptedLoadableModuleTest):
   """
