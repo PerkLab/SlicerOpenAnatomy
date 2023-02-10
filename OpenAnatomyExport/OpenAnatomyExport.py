@@ -420,10 +420,20 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       self._temporaryExportNodes.append(self._decimationParameterNode)
 
     # Quadric decimation
-    if (self.reductionFactor == 0.0) or (inputModelNode.GetPolyData().GetNumberOfPoints() < 50):
-      # Models with very small number of points are not decimated, as the memory saving is
-      # negligible and the models may become severely distorted.
+    #
+    # Models with very small number of points are not decimated, as the memory saving is
+    # negligible and the models may become severely distorted.
+    #
+    # Models that contain lines or vertices are not decimated either because the current
+    # quadric decimation implementation would remove vertices and lines.
+
+    if ((self.reductionFactor == 0.0) or (inputModelNode.GetPolyData().GetNumberOfPoints() < 50)
+        or (inputModelNode.GetPolyData().GetLines().GetNumberOfCells() > 0)
+        or (inputModelNode.GetPolyData().GetVerts().GetNumberOfCells() > 0)):
+
+      # Skip decimation
       outputModelNode.CopyContent(inputModelNode)
+
     else:
 
       # Temporary workaround (part 1/2):
@@ -465,8 +475,10 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     if not self._exportToFile:
       return True
 
-    # Normal array name is hardcoded into glTF exporter to "NORMAL"
-    outputPolyData.GetPointData().GetNormals().SetName("NORMAL")
+    # Normal array name is hardcoded into glTF exporter to "NORMAL".
+    normalArray = outputPolyData.GetPointData().GetNormals()
+    if normalArray is not None:  # polylines and vertices do not have normals
+      normalArray.SetName("NORMAL")
     outputModelNode.SetAndObservePolyData(outputPolyData)
 
     ras2lps = vtk.vtkMatrix4x4()
