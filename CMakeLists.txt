@@ -1,16 +1,16 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
 
-project(SlicerOpenAnatomy)
+project(SlicerAtlasEditor)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://github.com/PerkLab/SlicerOpenAnatomy")
-set(EXTENSION_CATEGORY "Segmentation")
-set(EXTENSION_CONTRIBUTORS "Andras Lasso (PerkLab), Csaba Pinter (PerkLab), Michael Halle (SPL)")
-set(EXTENSION_DESCRIPTION "3D Slicer extension for exporting Slicer scenes to use in the OpenAnatomy.org browser")
-set(EXTENSION_ICONURL "https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/SlicerOpenAnatomy.png")
-set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/Screenshot03.png https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/Screenshot02.png https://raw.githubusercontent.com/PerkLab/SlicerOpenAnatomy/master/Screenshot01.png")
-set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
+set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/SlicerAtlasEditor")
+set(EXTENSION_CATEGORY "Examples")
+set(EXTENSION_CONTRIBUTORS "Andy Huynh (University of Western Australia)")
+set(EXTENSION_DESCRIPTION "This is an example of a simple extension")
+set(EXTENSION_ICONURL "https://www.example.com/Slicer/Extensions/SlicerAtlasEditor.png")
+set(EXTENSION_SCREENSHOTURLS "https://www.example.com/Slicer/Extensions/SlicerAtlasEditor/Screenshots/1.png")
+set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
 
 #-----------------------------------------------------------------------------
 # Extension dependencies
@@ -19,7 +19,7 @@ include(${Slicer_USE_FILE})
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(OpenAnatomyExport)
+add_subdirectory(AtlasEditor)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------
