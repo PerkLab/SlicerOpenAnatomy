@@ -14,5 +14,9 @@ Look at - how rudolf bumm merged segments through pythonSlicer:
 Look at - how to use reusable segment editor functions in Slicer:
 https://apidocs.slicer.org/master/classqMRMLSegmentEditorWidget.html
 
+Look at - atlas structure schema:
+1. https://github.com/stity/mrmlToJson
+2. https://github.com/stity/atlas-schema
+
 ### Design
 ![](img/design.png)

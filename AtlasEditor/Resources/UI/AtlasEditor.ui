@@ -6,34 +6,111 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>289</width>
-    <height>286</height>
+    <width>379</width>
+    <height>473</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QPushButton" name="applyButton">
+    <widget class="QLabel" name="inputLabel_1">
      <property name="text">
-      <string>PushButton</string>
+      <string>Input Atlas Label Map:</string>
      </property>
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+    <widget class="qMRMLNodeComboBox" name="atlasLabelMapInputSelector">
+     <property name="nodeTypes">
+      <stringlist notr="true">
+       <string>vtkMRMLLabelMapVolumeNode</string>
+      </stringlist>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
+     <property name="hideChildNodeTypes">
+      <stringlist notr="true"/>
      </property>
-    </spacer>
+     <property name="interactionNodeSingletonTag">
+      <string notr="true"/>
+     </property>
+     <property name="selectNodeUponCreation">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="inputLabel_2">
+     <property name="text">
+      <string>Input Atlas Structure (.json):</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkPathLineEdit" name="atlasStructureInputPath"/>
+   </item>
+   <item>
+    <widget class="QPushButton" name="updateButton">
+     <property name="text">
+      <string>Update</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="outputLabel_2">
+     <property name="text">
+      <string>Output Atlas LabelMap:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="qMRMLNodeComboBox" name="atlasLabelMapOutputSelector">
+     <property name="nodeTypes">
+      <stringlist notr="true">
+       <string>vtkMRMLLabelMapVolumeNode</string>
+      </stringlist>
+     </property>
+     <property name="hideChildNodeTypes">
+      <stringlist notr="true"/>
+     </property>
+     <property name="interactionNodeSingletonTag">
+      <string notr="true"/>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="structureTreeLabel">
+     <property name="text">
+      <string>Atlas Label Map Structure</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="structureTreeWidget">
+     <column>
+      <property name="text">
+       <string notr="true">1</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="applyButton">
+     <property name="text">
+      <string>Apply</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>ctkPathLineEdit</class>
+   <extends>QWidget</extends>
+   <header>ctkPathLineEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLNodeComboBox</class>
+   <extends>QWidget</extends>
+   <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
   <customwidget>
    <class>qMRMLWidget</class>
    <extends>QWidget</extends>
@@ -42,5 +119,54 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>AtlasEditor</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>atlasLabelMapInputSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>236</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>36</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>AtlasEditor</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>atlasStructureInputPath</receiver>
+   <slot>addCurrentPathToHistory()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>236</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>82</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>AtlasEditor</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>atlasLabelMapOutputSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>236</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>128</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

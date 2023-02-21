@@ -2,6 +2,8 @@ import logging
 import os
 
 import vtk
+import ctk
+import qt
 
 import slicer
 from slicer.ScriptedLoadableModule import *
@@ -24,15 +26,9 @@ class AtlasEditor(ScriptedLoadableModule):
         self.parent.dependencies = []  # TODO: add here list of module names that this module requires
         self.parent.contributors = ["John Doe (AnyWare Corp.)"]  # TODO: replace with "Firstname Lastname (Organization)"
         # TODO: update with short description of the module and a link to online module documentation
-        self.parent.helpText = """
-This is an example of scripted loadable module bundled in an extension.
-See more information in <a href="https://github.com/organization/projectname#AtlasEditor">module documentation</a>.
-"""
+        self.parent.helpText = """"""
         # TODO: replace with organization, grant and thanks
-        self.parent.acknowledgementText = """
-This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
-and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
-"""
+        self.parent.acknowledgementText = """"""
 
         # Additional initialization step after application startup is complete
         #slicer.app.connect("startupCompleted()", registerSampleData)
@@ -87,9 +83,15 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
         # (in the selected parameter node).
 
+        self.ui.atlasLabelMapInputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+        #self.ui.atlasLabelMapOutputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+
+        # Initialize Structure Tree GUI
+        self.ui.structureTreeWidget.setHeaderLabels(["Structure"])
 
         # Buttons
         self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+        self.ui.updateButton.connect('clicked(bool)', self.onUpdateButton)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -146,10 +148,6 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Set and observe parameter node.
         Observation is needed because when the parameter node is changed then the GUI must be updated immediately.
         """
-
-        if inputParameterNode:
-            self.logic.setDefaultParameters(inputParameterNode)
-
         # Unobserve previously selected parameter node and add an observer to the newly selected.
         # Changes of parameter node are observed so that whenever parameters are changed by a script or any other module
         # those are reflected immediately in the GUI.
@@ -158,7 +156,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self._parameterNode = inputParameterNode
         if self._parameterNode is not None:
             self.addObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
-
+    
         # Initial GUI update
         self.updateGUIFromParameterNode()
 
@@ -175,7 +173,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self._updatingGUIFromParameterNode = True
 
         # Update node selectors and sliders
-
+        #self.ui.atlasLabelMapInputSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputLabelMap"))
 
         # Update buttons states and tooltips
 
@@ -194,6 +192,13 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
+        self._parameterNode.SetNodeReferenceID("InputLabelMap", self.ui.atlasLabelMapInputSelector.currentNodeID)
+        self._parameterNode.SetNodeReferenceID("InputAtlasStructure", self.ui.atlasLabelMapInputSelector.currentNodeID)
+
+        # print check if the node is set
+        print(self._parameterNode.GetNodeReference("InputLabelMap"))
+        print(self._parameterNode.GetNodeReference("InputAtlasStructure"))
+        
 
         self._parameterNode.EndModify(wasModified)
 
@@ -203,8 +208,15 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            # Compute output
-            self.logic.process()
+            self.logic.process(self.ui.atlasLabelMapInputSelector.currentNode(), self.ui.atlasStructureInputPath.currentPath)
+
+    def onUpdateButton(self):
+        """
+        Run processing when user clicks "Apply" button.
+        """
+        with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
+
+            self.logic.updateStructureView(self.ui.atlasStructureInputPath.currentPath, self.ui.structureTreeWidget)
 
 
 #
@@ -231,18 +243,73 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         """
         Initialize parameter node with default settings.
         """
-        if not parameterNode.GetParameter("Threshold"):
-            parameterNode.SetParameter("Threshold", "100.0")
-        if not parameterNode.GetParameter("Invert"):
-            parameterNode.SetParameter("Invert", "false")
 
-    def process(self):
+    def getGroups(self, atlasStructureJSON):
+        groups = []
+        for item in atlasStructureJSON:
+            if item['@type'] == "Group":
+                groups.append([item['@id'], item['annotation']['name']])
+
+        return groups
+    
+    def getStructures(self, atlasStructureJSON):
+        structures = []
+        for item in atlasStructureJSON:
+            if item['@type'] == "Structure":
+                structures.append([item['@id'], item['annotation']['name']])
+
+        return structures
+
+    def buildHierarchy(self, InputStructurePath, structureTreeWidget):
+        """
+        Build the hierarchy of the atlas.
+        """
+        import json
+
+        defaultAtlasID = "#Brain_Atlas"
+        atlasStructureJSON = json.load(open(InputStructurePath))
+
+        groups = self.getGroups(atlasStructureJSON)
+        structures = self.getStructures(atlasStructureJSON)
+                
+        # elementIndex = []
+        # for group in groups:                
+        #     group_QTreeWidgetItems = qt.QTreeWidgetItem(structureTreeWidget)
+        #     group_QTreeWidgetItems.setText(0, group[1])
+
+        groups = []
+        for item in atlasStructureJSON:
+            if item['@id'] == defaultAtlasID:
+                qTreeWidgetItems = qt.QTreeWidgetItem(structureTreeWidget)
+                qTreeWidgetItems.setText(0, item['annotation']['name'])
+                for member in item['member']:
+                    groups.append(member)
+
+        childIndex = 0
+        for group in groups:
+            for item in atlasStructureJSON:
+                if item['@id'] == group:
+                    current_qTreeWidgetItems = qt.QTreeWidgetItem(group)
+                    qTreeWidgetItems.insertChild(childIndex, current_qTreeWidgetItems)
+                    
+
+
+    def updateStructureView(self, InputStructurePath, structureTreeWidget):
+        """
+        Update the structure view of the atlas.
+        """
+            
+        # clear the tree
+        structureTreeWidget.clear()
+
+        # get the tree of the structure
+        self.buildHierarchy(InputStructurePath, structureTreeWidget)
+
+
+    def process(self, InputLabelMap, InputStructurePath):
         """
         Run the processing algorithm.
         Can be used without GUI widget.
-        :param inputVolume: volume to be thresholded
-        :param outputVolume: thresholding result
-        :param imageThreshold: values above/below this threshold will be set to 0
-        :param invert: if True then values above the threshold will be set to 0, otherwise values below are set to 0
-        :param showResult: show output volume in slice viewers
         """
+
+        print(InputStructurePath)
