@@ -260,7 +260,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         return structures
 
-    def buildHierarchy(self, InputStructurePath, structureTreeWidget):
+    def buildTopHierarchy(self, InputStructurePath, qTreeWidgetItemsTop):
         """
         Build the hierarchy of the atlas.
         """
@@ -269,29 +269,34 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         defaultAtlasID = "#Brain_Atlas"
         atlasStructureJSON = json.load(open(InputStructurePath))
 
-        groups = self.getGroups(atlasStructureJSON)
-        structures = self.getStructures(atlasStructureJSON)
-                
-        # elementIndex = []
-        # for group in groups:                
-        #     group_QTreeWidgetItems = qt.QTreeWidgetItem(structureTreeWidget)
-        #     group_QTreeWidgetItems.setText(0, group[1])
-
         groups = []
         for item in atlasStructureJSON:
             if item['@id'] == defaultAtlasID:
-                qTreeWidgetItems = qt.QTreeWidgetItem(structureTreeWidget)
-                qTreeWidgetItems.setText(0, item['annotation']['name'])
+                qTreeWidgetItemsTop.setText(0, item['annotation']['name'])
                 for member in item['member']:
                     groups.append(member)
 
-        childIndex = 0
+        return groups
+    
+    def buildHierarchy(self, InputStructurePath, structureTreeWidget, groups):
+        """
+        Build the hierarchy of the atlas.
+        """
+        import json
+
+        atlasStructureJSON = json.load(open(InputStructurePath))               
+
         for group in groups:
             for item in atlasStructureJSON:
                 if item['@id'] == group:
-                    current_qTreeWidgetItems = qt.QTreeWidgetItem(group)
-                    qTreeWidgetItems.insertChild(childIndex, current_qTreeWidgetItems)
-                    
+                    child = qt.QTreeWidgetItem()
+                    structureTreeWidget.addChild(child)
+                    child.setText(0, item['annotation']['name'])
+                    if item['@type'] == "Group":
+                        groups1 = []
+                        for member in item['member']:
+                            groups1.append(member)                     
+                        self.buildHierarchy(InputStructurePath, child, groups1)
 
 
     def updateStructureView(self, InputStructurePath, structureTreeWidget):
@@ -302,8 +307,10 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         # clear the tree
         structureTreeWidget.clear()
 
+        qTreeWidgetItemsTop = qt.QTreeWidgetItem(structureTreeWidget)
         # get the tree of the structure
-        self.buildHierarchy(InputStructurePath, structureTreeWidget)
+        groups = self.buildTopHierarchy(InputStructurePath, qTreeWidgetItemsTop)
+        self.buildHierarchy(InputStructurePath, qTreeWidgetItemsTop, groups)
 
 
     def process(self, InputLabelMap, InputStructurePath):
