@@ -215,7 +215,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Run processing when user clicks "Apply" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
-
+            
             self.logic.updateStructureView(self.ui.atlasStructureInputPath.currentPath, self.ui.structureTreeWidget)
 
 
@@ -292,6 +292,8 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                     child = qt.QTreeWidgetItem()
                     structureTreeWidget.addChild(child)
                     child.setText(0, item['annotation']['name'])
+                    child.setFlags(child.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+                    child.setCheckState(0, qt.Qt.Unchecked)
                     if item['@type'] == "Group":
                         groups1 = []
                         for member in item['member']:
@@ -308,9 +310,13 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         structureTreeWidget.clear()
 
         qTreeWidgetItemsTop = qt.QTreeWidgetItem(structureTreeWidget)
+        qTreeWidgetItemsTop.setFlags(qTreeWidgetItemsTop.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+
         # get the tree of the structure
         groups = self.buildTopHierarchy(InputStructurePath, qTreeWidgetItemsTop)
         self.buildHierarchy(InputStructurePath, qTreeWidgetItemsTop, groups)
+
+        structureTreeWidget.expandToDepth(0)
 
 
     def process(self, InputLabelMap, InputStructurePath):
