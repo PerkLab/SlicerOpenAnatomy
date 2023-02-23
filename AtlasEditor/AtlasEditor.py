@@ -239,28 +239,24 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         """
         ScriptedLoadableModuleLogic.__init__(self)
 
-        
-
-    def setDefaultParameters(self, parameterNode):
-        """
-        Initialize parameter node with default settings.
-        """
-
-    def getGroups(self, atlasStructureJSON):
-        groups = []
-        for item in atlasStructureJSON:
-            if item['@type'] == "Group":
-                groups.append([item['@id'], item['annotation']['name']])
-
-        return groups
     
-    def getStructures(self, atlasStructureJSON):
-        structures = []
-        for item in atlasStructureJSON:
-            if item['@type'] == "Structure":
-                structures.append([item['@id'], item['annotation']['name']])
+    qTreeWidgetItemsTop = qt.QTreeWidgetItem()
 
-        return structures
+    # def getGroups(self, atlasStructureJSON):
+    #     groups = []
+    #     for item in atlasStructureJSON:
+    #         if item['@type'] == "Group":
+    #             groups.append([item['@id'], item['annotation']['name']])
+
+    #     return groups
+    
+    # def getStructures(self, atlasStructureJSON):
+    #     structures = []
+    #     for item in atlasStructureJSON:
+    #         if item['@type'] == "Structure":
+    #             structures.append([item['@id'], item['annotation']['name']])
+
+    #     return structures
 
     def buildTopHierarchy(self, InputStructurePath, qTreeWidgetItemsTop):
         """
@@ -302,13 +298,30 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                             groups1.append(member)                     
                         self.buildHierarchy(InputStructurePath, child, groups1)
 
-    def getCheckedItems(self, structureTreeWidget):
+    def getCheckedItems(self):
         """
         Get the checked items of the structure view.
         """
-        child_count = structureTreeWidget.childCount()
 
-        return child_count
+        checked = dict()
+
+        root = self.qTreeWidgetItemsTop
+        signal_count = root.childCount()
+
+        for i in range(signal_count):
+            signal = root.child(i)
+            checked_sweeps = list()
+            num_children = signal.childCount()
+
+            for n in range(num_children):
+                child = signal.child(n)
+
+                if child.checkState(0) == qt.Qt.Checked:
+                    checked_sweeps.append(child.text(0))
+
+            checked[signal.text(0)] = checked_sweeps
+
+        return checked
 
 
     def updateStructureView(self, InputStructurePath, structureTreeWidget):
@@ -318,13 +331,14 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             
         # clear the tree
         structureTreeWidget.clear()
-
-        qTreeWidgetItemsTop = qt.QTreeWidgetItem(structureTreeWidget)
-        qTreeWidgetItemsTop.setFlags(qTreeWidgetItemsTop.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+    
+        # initiate the tree
+        self.qTreeWidgetItemsTop = qt.QTreeWidgetItem(structureTreeWidget)
+        self.qTreeWidgetItemsTop.setFlags(self.qTreeWidgetItemsTop.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
 
         # get the tree of the structure
-        groups = self.buildTopHierarchy(InputStructurePath, qTreeWidgetItemsTop)
-        self.buildHierarchy(InputStructurePath, qTreeWidgetItemsTop, groups)
+        groups = self.buildTopHierarchy(InputStructurePath, self.qTreeWidgetItemsTop)
+        self.buildHierarchy(InputStructurePath, self.qTreeWidgetItemsTop, groups)
 
         structureTreeWidget.expandToDepth(0)
 
@@ -335,5 +349,5 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         Can be used without GUI widget.
         """
 
-        checkedItems = self.getCheckedItems(structureTreeWidget)
+        checkedItems = self.getCheckedItems()
         print(checkedItems)
