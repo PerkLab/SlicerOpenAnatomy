@@ -4,6 +4,8 @@ import os
 import vtk
 import ctk
 import qt
+import json
+
 
 import slicer
 from slicer.ScriptedLoadableModule import *
@@ -208,7 +210,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.process(self.ui.structureTreeWidget)
+            self.logic.process()
 
     def onUpdateButton(self):
         """
@@ -233,6 +235,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
+
     def __init__(self):
         """
         Called when the logic class is instantiated. Can be used for initializing member variables.
@@ -240,7 +243,10 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         ScriptedLoadableModuleLogic.__init__(self)
 
     
-    qTreeWidgetItemsTop = qt.QTreeWidgetItem()
+    rootTree = qt.QTreeWidgetItem()
+    atlasStructureJSON = []
+    defaultAtlasID = ""
+
 
     # def getGroups(self, atlasStructureJSON):
     #     groups = []
@@ -258,37 +264,30 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
     #     return structures
 
-    def buildTopHierarchy(self, InputStructurePath, qTreeWidgetItemsTop):
+    def buildTopHierarchy(self):
         """
         Build the hierarchy of the atlas.
         """
-        import json
-
-        defaultAtlasID = "#Brain_Atlas"
-        atlasStructureJSON = json.load(open(InputStructurePath))
 
         groups = []
-        for item in atlasStructureJSON:
-            if item['@id'] == defaultAtlasID:
-                qTreeWidgetItemsTop.setText(0, item['annotation']['name'])
+        for item in self.atlasStructureJSON:
+            if item['@id'] == self.defaultAtlasID:
+                self.rootTree.setText(0, item['annotation']['name'])
                 for member in item['member']:
                     groups.append(member)
 
         return groups
     
-    def buildHierarchy(self, InputStructurePath, structureTreeWidget, groups):
+    def buildHierarchy(self, currentTree, groups):
         """
         Build the hierarchy of the atlas.
         """
-        import json
-
-        atlasStructureJSON = json.load(open(InputStructurePath))               
 
         for group in groups:
-            for item in atlasStructureJSON:
+            for item in self.atlasStructureJSON:
                 if item['@id'] == group:
                     child = qt.QTreeWidgetItem()
-                    structureTreeWidget.addChild(child)
+                    currentTree.addChild(child)
                     child.setText(0, item['annotation']['name'])
                     child.setFlags(child.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
                     child.setCheckState(0, qt.Qt.Unchecked)
@@ -296,7 +295,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                         groups1 = []
                         for member in item['member']:
                             groups1.append(member)                     
-                        self.buildHierarchy(InputStructurePath, child, groups1)
+                        self.buildHierarchy(child, groups1)
 
     def getCheckedItems(self):
         """
@@ -305,11 +304,10 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         checked = dict()
 
-        root = self.qTreeWidgetItemsTop
-        signal_count = root.childCount()
+        signal_count = self.rootTree.childCount()
 
         for i in range(signal_count):
-            signal = root.child(i)
+            signal = self.rootTree.child(i)
             checked_sweeps = list()
             num_children = signal.childCount()
 
@@ -324,26 +322,32 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         return checked
 
 
-    def updateStructureView(self, InputStructurePath, structureTreeWidget):
+    def updateStructureView(self, inputStructurePath, structureTreeWidget):
         """
         Update the structure view of the atlas.
         """
             
         # clear the tree
         structureTreeWidget.clear()
-    
+
+        # initiate atlas type
+        self.defaultAtlasID = "#Brain_Atlas"
+
         # initiate the tree
-        self.qTreeWidgetItemsTop = qt.QTreeWidgetItem(structureTreeWidget)
-        self.qTreeWidgetItemsTop.setFlags(self.qTreeWidgetItemsTop.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+        self.rootTree = qt.QTreeWidgetItem(structureTreeWidget)
+        self.rootTree.setFlags(self.rootTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+
+        # initiate the json path
+        self.atlasStructureJSON = json.load(open(inputStructurePath))
 
         # get the tree of the structure
-        groups = self.buildTopHierarchy(InputStructurePath, self.qTreeWidgetItemsTop)
-        self.buildHierarchy(InputStructurePath, self.qTreeWidgetItemsTop, groups)
+        groups = self.buildTopHierarchy()
+        self.buildHierarchy(self.rootTree, groups)
 
         structureTreeWidget.expandToDepth(0)
 
 
-    def process(self, structureTreeWidget):
+    def process(self):
         """
         Run the processing algorithm.
         Can be used without GUI widget.
