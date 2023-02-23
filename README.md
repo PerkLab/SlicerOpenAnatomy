@@ -18,5 +18,5 @@ Look at - atlas structure schema:
 1. https://github.com/stity/mrmlToJson
 2. https://github.com/stity/atlas-schema
 
-### Design
-![](img/design.png)
+### Screenshot of Extension
+![](img/AtlasEditor.png)
