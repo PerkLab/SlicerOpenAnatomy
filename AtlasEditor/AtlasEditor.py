@@ -208,7 +208,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.process(self.ui.atlasLabelMapInputSelector.currentNode(), self.ui.atlasStructureInputPath.currentPath)
+            self.logic.process(self.ui.structureTreeWidget)
 
     def onUpdateButton(self):
         """
@@ -238,6 +238,8 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         Called when the logic class is instantiated. Can be used for initializing member variables.
         """
         ScriptedLoadableModuleLogic.__init__(self)
+
+        
 
     def setDefaultParameters(self, parameterNode):
         """
@@ -300,6 +302,14 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                             groups1.append(member)                     
                         self.buildHierarchy(InputStructurePath, child, groups1)
 
+    def getCheckedItems(self, structureTreeWidget):
+        """
+        Get the checked items of the structure view.
+        """
+        child_count = structureTreeWidget.childCount()
+
+        return child_count
+
 
     def updateStructureView(self, InputStructurePath, structureTreeWidget):
         """
@@ -319,10 +329,11 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         structureTreeWidget.expandToDepth(0)
 
 
-    def process(self, InputLabelMap, InputStructurePath):
+    def process(self, structureTreeWidget):
         """
         Run the processing algorithm.
         Can be used without GUI widget.
         """
 
-        print(InputStructurePath)
+        checkedItems = self.getCheckedItems(structureTreeWidget)
+        print(checkedItems)
