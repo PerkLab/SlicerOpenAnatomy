@@ -469,24 +469,19 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     outputPolyData.GetPointData().GetNormals().SetName("NORMAL")
     outputModelNode.SetAndObservePolyData(outputPolyData)
 
-    transformOutputModelToWorld = vtk.vtkGeneralTransform()
-    slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(inputModelNode.GetParentTransformNode(), None, transformOutputModelToWorld)
+    transformOutputModelToWorldRAS = vtk.vtkGeneralTransform()
+    transformOutputModelToWorldRAS.PostMultiply()
+    slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(inputModelNode.GetParentTransformNode(), None, transformOutputModelToWorldRAS)
+    
+    transformOutputModelToWorldLPS = transformOutputModelToWorldRAS
+    transformOutputModelToWorldLPS.Scale(-1.0, -1.0, 1.0) #ras2lpsTransform
     transformToWorldFilter = vtk.vtkTransformPolyDataFilter()
-    transformToWorldFilter.SetTransform(transformOutputModelToWorld)
+    transformToWorldFilter.SetTransform(transformOutputModelToWorldLPS)
     transformToWorldFilter.SetInputData(outputPolyData)
-
-    ras2lps = vtk.vtkMatrix4x4()
-    ras2lps.SetElement(0,0,-1)
-    ras2lps.SetElement(1,1,-1)
-    ras2lpsTransform = vtk.vtkTransform()
-    ras2lpsTransform.SetMatrix(ras2lps)
-    transformer = vtk.vtkTransformPolyDataFilter()
-    transformer.SetTransform(ras2lpsTransform)
-    transformer.SetInputConnection(transformToWorldFilter.GetOutputPort())
 
     actor = vtk.vtkActor()
     mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputConnection(transformer.GetOutputPort())
+    mapper.SetInputConnection(transformToWorldFilter.GetOutputPort())
     actor.SetMapper(mapper)
     displayNode = outputModelNode.GetDisplayNode()
 
