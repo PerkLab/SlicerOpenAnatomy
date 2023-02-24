@@ -18,5 +18,8 @@ Look at - atlas structure schema:
 1. https://github.com/stity/mrmlToJson
 2. https://github.com/stity/atlas-schema
 
+Look at - manipulating segments by Andras:
+1. https://gist.github.com/lassoan/7c94c334653010696b2bf96abc0ac8e7
+
 ### Screenshot of Extension
 ![](img/AtlasEditor.png)

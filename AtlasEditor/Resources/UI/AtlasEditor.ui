@@ -92,9 +92,16 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="applyButton">
+    <widget class="QPushButton" name="mergeButton">
      <property name="text">
-      <string>Apply</string>
+      <string>Merge</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="removeButton">
+     <property name="text">
+      <string>Remove</string>
      </property>
     </widget>
    </item>
