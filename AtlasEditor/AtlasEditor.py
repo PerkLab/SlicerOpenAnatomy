@@ -5,6 +5,7 @@ import vtk
 import ctk
 import qt
 import json
+import numpy as np
 
 
 import slicer
@@ -23,10 +24,10 @@ class AtlasEditor(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "AtlasEditor"  # TODO: make this more human readable by adding spaces
-        self.parent.categories = ["Examples"]  # TODO: set categories (folders where the module shows up in the module selector)
+        self.parent.title = "Atlas Editor"  # TODO: make this more human readable by adding spaces
+        self.parent.categories = ["Segmentation"]  # TODO: set categories (folders where the module shows up in the module selector)
         self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-        self.parent.contributors = ["John Doe (AnyWare Corp.)"]  # TODO: replace with "Firstname Lastname (Organization)"
+        self.parent.contributors = ["Andy Huynh (University of Western Australia)"]  # TODO: replace with "Firstname Lastname (Organization)"
         # TODO: update with short description of the module and a link to online module documentation
         self.parent.helpText = """"""
         # TODO: replace with organization, grant and thanks
@@ -85,14 +86,15 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
         # (in the selected parameter node).
 
-        self.ui.atlasLabelMapInputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-        #self.ui.atlasLabelMapOutputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+        self.ui.atlasLabelMapInputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI) #vtkMRMLLabelMapVolumeNode
+        self.ui.atlasLabelMapOutputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI) #vtkMRMLLabelMapVolumeNode
 
         # Initialize Structure Tree GUI
         self.ui.structureTreeWidget.setHeaderLabels(["Structure"])
 
         # Buttons
-        self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+        self.ui.mergeButton.connect('clicked(bool)', self.onMergeButton)
+        self.ui.removeButton.connect('clicked(bool)', self.onRemoveButton)
         self.ui.updateButton.connect('clicked(bool)', self.onUpdateButton)
 
         # Make sure parameter node is initialized (needed for module reload)
@@ -195,22 +197,25 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
         self._parameterNode.SetNodeReferenceID("InputLabelMap", self.ui.atlasLabelMapInputSelector.currentNodeID)
-        self._parameterNode.SetNodeReferenceID("InputAtlasStructure", self.ui.atlasLabelMapInputSelector.currentNodeID)
-
-        # print check if the node is set
-        print(self._parameterNode.GetNodeReference("InputLabelMap"))
-        print(self._parameterNode.GetNodeReference("InputAtlasStructure"))
-        
+        self._parameterNode.SetNodeReferenceID("OutputLabelMap", self.ui.atlasLabelMapOutputSelector.currentNodeID)
 
         self._parameterNode.EndModify(wasModified)
 
-    def onApplyButton(self):
+    def onMergeButton(self):
         """
         Run processing when user clicks "Apply" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.process()
+            self.logic.merge()
+    
+    def onRemoveButton(self):
+        """
+        Run processing when user clicks "Apply" button.
+        """
+        with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
+
+            self.logic.remove(self.ui.atlasLabelMapInputSelector.currentNode(), self.ui.atlasLabelMapOutputSelector.currentNode())
 
     def onUpdateButton(self):
         """
@@ -246,23 +251,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     rootTree = qt.QTreeWidgetItem()
     atlasStructureJSON = []
     defaultAtlasID = ""
-
-
-    # def getGroups(self, atlasStructureJSON):
-    #     groups = []
-    #     for item in atlasStructureJSON:
-    #         if item['@type'] == "Group":
-    #             groups.append([item['@id'], item['annotation']['name']])
-
-    #     return groups
-    
-    # def getStructures(self, atlasStructureJSON):
-    #     structures = []
-    #     for item in atlasStructureJSON:
-    #         if item['@type'] == "Structure":
-    #             structures.append([item['@id'], item['annotation']['name']])
-
-    #     return structures
 
     def buildTopHierarchy(self):
         """
@@ -347,7 +335,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         structureTreeWidget.expandToDepth(0)
 
 
-    def process(self):
+    def merge(self):
         """
         Run the processing algorithm.
         Can be used without GUI widget.
@@ -355,3 +343,64 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         checkedItems = self.getCheckedItems()
         print(checkedItems)
+
+    def getStructureIdOfGroups(self, groups):
+        structureIds = []
+        for group in groups:
+            for item in self.atlasStructureJSON:
+                if item['@id'] == group:
+                    if item['@type'] == "Structure":
+                        structureIds.append(item['annotation']['name'])
+                    if item['@type'] == "Group":
+                        groups.extend(item['member'])
+
+        return structureIds
+    
+    def getIdfromName(self, name):
+        for item in self.atlasStructureJSON:
+            if (item['@type'] == "Structure" or item['@type'] == "Group"):
+                if item['annotation']['name'] == name:
+                    return item['@id']  
+        
+
+    def remove(self, inputLabelMap, outputLabelMap):
+        """
+        Run the processing algorithm.
+        Can be used without GUI widget.
+        """
+        groupsToRemove = []
+        checkedItems = self.getCheckedItems()
+        for checkedItem in checkedItems:
+            group = checkedItems[checkedItem]
+            if group:
+                groupsToRemove.append(group)
+
+        # flatten the list
+        groupsToRemove = [item for sublist in groupsToRemove for item in sublist]
+
+        groupIdsToRemove = []
+        for group in groupsToRemove:
+            groupIdsToRemove.append(self.getIdfromName(group))
+        
+        structureIds = self.getStructureIdOfGroups(groupIdsToRemove)
+
+        # Create segmentation
+        segmentationNode = slicer.vtkMRMLSegmentationNode()
+        slicer.mrmlScene.AddNode(segmentationNode)
+        segmentationNode.CreateDefaultDisplayNodes() # only needed for display
+        segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(inputLabelMap)
+
+        slicer.vtkSlicerSegmentationsModuleLogic.ImportLabelmapToSegmentationNode(inputLabelMap, segmentationNode)
+
+        for structureId in structureIds:
+            try:
+                segmentationNode.RemoveSegment(structureId)
+            except:
+                print("Segment not found: " + structureId)
+        
+        #slicer.util.saveNode(outputLabelMap, "/Users/andy/Documents/SlicerAtlasEditor/hncma-atlas-cleaned.nrrd")
+
+        slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
+
+        slicer.mrmlScene.RemoveNode(segmentationNode)
+        
