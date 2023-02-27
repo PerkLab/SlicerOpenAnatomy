@@ -285,25 +285,28 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                             groups1.append(member)                     
                         self.buildHierarchy(child, groups1)
 
-    def getCheckedItems(self):
+    def getCheckedItems(self, tree):
         """
         Get the checked items of the structure view.
         """
 
         checked = dict()
 
-        signal_count = self.rootTree.childCount()
+        signal_count = tree.childCount()
 
         for i in range(signal_count):
-            signal = self.rootTree.child(i)
+            signal = tree.child(i)
             checked_sweeps = list()
             num_children = signal.childCount()
 
             for n in range(num_children):
                 child = signal.child(n)
-
+                
                 if child.checkState(0) == qt.Qt.Checked:
                     checked_sweeps.append(child.text(0))
+
+                if child.childCount() > 0:
+                    checked.update(self.getCheckedItems(child))
 
             checked[signal.text(0)] = checked_sweeps
 
@@ -334,16 +337,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         structureTreeWidget.expandToDepth(0)
 
-
-    def merge(self):
-        """
-        Run the processing algorithm.
-        Can be used without GUI widget.
-        """
-
-        checkedItems = self.getCheckedItems()
-        print(checkedItems)
-
     def getStructureIdOfGroups(self, groups):
         structureIds = []
         for group in groups:
@@ -369,7 +362,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         Can be used without GUI widget.
         """
         groupsToRemove = []
-        checkedItems = self.getCheckedItems()
+        checkedItems = self.getCheckedItems(self.rootTree)
         for checkedItem in checkedItems:
             group = checkedItems[checkedItem]
             if group:
@@ -393,14 +386,20 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         slicer.vtkSlicerSegmentationsModuleLogic.ImportLabelmapToSegmentationNode(inputLabelMap, segmentationNode)
 
         for structureId in structureIds:
-            try:
-                segmentationNode.RemoveSegment(structureId)
-            except:
-                print("Segment not found: " + structureId)
-        
-        #slicer.util.saveNode(outputLabelMap, "/Users/andy/Documents/SlicerAtlasEditor/hncma-atlas-cleaned.nrrd")
+            segmentationNode.RemoveSegment(structureId)
 
         slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
 
         slicer.mrmlScene.RemoveNode(segmentationNode)
+
+    def merge(self):
+        """
+        Run the processing algorithm.
+        Can be used without GUI widget.
+        """
+
+        checkedItems = self.getCheckedItems(self.rootTree)
+
+        print('\n')
+        print(checkedItems)
         
