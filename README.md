@@ -45,14 +45,14 @@ The Atlas Editor extension is useful for editing and simplifying these comprehen
 * Convert labelmap to segmentation node to edit/visualise further.
 
 ## Developers
-Open Anatomy's Atlas Browser
+Open Anatomy's Atlas Browser   
 https://github.com/mhalle/oabrowser/
 
-SPL/NAC Brain Atlas
+SPL/NAC Brain Atlas   
 https://github.com/mhalle/spl-brain-atlas
 
-Atlas Structure Schema
-https://github.com/stity/mrmlToJson
+Atlas Structure Schema   
+https://github.com/stity/mrmlToJson   
 https://github.com/stity/atlas-schema
 
 ## Acknowledgments
