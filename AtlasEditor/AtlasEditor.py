@@ -1,11 +1,6 @@
-import logging
-import os
-
 import vtk
-import ctk
 import qt
 import json
-import numpy as np
 
 
 import slicer
@@ -32,10 +27,6 @@ class AtlasEditor(ScriptedLoadableModule):
         self.parent.helpText = """"""
         # TODO: replace with organization, grant and thanks
         self.parent.acknowledgementText = """"""
-
-        # Additional initialization step after application startup is complete
-        #slicer.app.connect("startupCompleted()", registerSampleData)
-
 
 #
 # AtlasEditorWidget
@@ -207,7 +198,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.merge()
+            self.logic.merge(self.ui.atlasLabelMapInputSelector.currentNode(), self.ui.atlasLabelMapOutputSelector.currentNode())
     
     def onRemoveButton(self):
         """
@@ -247,8 +238,8 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         """
         ScriptedLoadableModuleLogic.__init__(self)
 
-    
-    rootTree = qt.QTreeWidgetItem()
+    rootWidget = None
+    rootTree = None
     atlasStructureJSON = []
     defaultAtlasID = ""
 
@@ -295,20 +286,25 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         signal_count = tree.childCount()
 
         for i in range(signal_count):
-            signal = tree.child(i)
-            checked_sweeps = list()
-            num_children = signal.childCount()
+            if tree.child(i).checkState(0) == qt.Qt.Checked:
 
-            for n in range(num_children):
-                child = signal.child(n)
-                
-                if child.checkState(0) == qt.Qt.Checked:
-                    checked_sweeps.append(child.text(0))
+                signal = tree.child(i)
+                checked_sweeps = list()
+                num_children = signal.childCount()
 
-                if child.childCount() > 0:
-                    checked.update(self.getCheckedItems(child))
+                for n in range(num_children):
+                    child = signal.child(n)
+                    
+                    if child.checkState(0) == qt.Qt.Checked:
+                        checked_sweeps.append(child.text(0))
 
-            checked[signal.text(0)] = checked_sweeps
+                    # if child.childCount() > 0:
+                    #     checked.update(self.getCheckedItems(child))
+
+                checked[signal.text(0)] = checked_sweeps
+            
+            elif tree.child(i).checkState(0) == qt.Qt.PartiallyChecked:
+                checked.update(self.getCheckedItems(tree.child(i)))
 
         return checked
 
@@ -325,6 +321,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.defaultAtlasID = "#Brain_Atlas"
 
         # initiate the tree
+        self.rootWidget = structureTreeWidget
         self.rootTree = qt.QTreeWidgetItem(structureTreeWidget)
         self.rootTree.setFlags(self.rootTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
 
@@ -343,7 +340,11 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             for item in self.atlasStructureJSON:
                 if item['@id'] == group:
                     if item['@type'] == "Structure":
-                        structureIds.append(item['annotation']['name'])
+                        if "-" in item['annotation']['name']:
+                            structureIds.append(item['annotation']['name'].replace("-", " "))
+                            #print(item['annotation']['name'].replace("-", " "))
+                        else:
+                            structureIds.append(item['annotation']['name'])
                     if item['@type'] == "Group":
                         groups.extend(item['member'])
 
@@ -392,14 +393,76 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         slicer.mrmlScene.RemoveNode(segmentationNode)
 
-    def merge(self):
+    def mergeSegments(self, segmentationNode, segmentsToMerge, mergedSegmentName):
+
+        groupIdsToMerge = []
+        for group in segmentsToMerge:
+            groupIdsToMerge.append(self.getIdfromName(group))
+        structureIds = self.getStructureIdOfGroups(groupIdsToMerge)
+        print(structureIds)
+
+        # Create temporary segment editor to get access to effects
+        self.segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
+        self.segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+        self.segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        self.segmentEditorWidget.setMRMLSegmentEditorNode(self.segmentEditorNode)
+        
+        firstSegment = structureIds[0]
+
+        for i in range(len(structureIds) - 1):
+            modifierSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(structureIds[i + 1])
+            selectedSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(firstSegment)
+            self.segmentEditorWidget.setSegmentationNode(segmentationNode)
+            self.segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteAllSegments) 
+            self.segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
+            self.segmentEditorNode.SetSelectedSegmentID(selectedSegmentID)
+            self.segmentEditorWidget.setActiveEffectByName("Logical operators")
+            effect = self.segmentEditorWidget.activeEffect()
+            effect.setParameter("BypassMasking","0")
+            effect.setParameter("ModifierSegmentID",modifierSegmentID)
+            effect.setParameter("Operation","UNION")
+            effect.self().onApply()
+            print('Merge: ' + selectedSegmentID + ' with ' + modifierSegmentID)
+            
+    def getCheckedItems1(self):
+        "Needs work - only checks one item.. This one uses the widget itself instead of the tree item (less code)"
+        groups = []
+        for i in self.rootWidget.selectedItems():
+            groups.append(i.text(0))
+        
+        return groups
+
+    def merge(self, inputLabelMap, outputLabelMap):
         """
         Run the processing algorithm.
         Can be used without GUI widget.
         """
+        print('\nMerging...')
 
+        # Create segmentation
+        segmentationNode = slicer.vtkMRMLSegmentationNode()
+        slicer.mrmlScene.AddNode(segmentationNode)
+        segmentationNode.CreateDefaultDisplayNodes() # only needed for display
+        segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(inputLabelMap)
+
+        # Convert labelmap to Segmentation Node
+        slicer.vtkSlicerSegmentationsModuleLogic.ImportLabelmapToSegmentationNode(inputLabelMap, segmentationNode)
+
+        # Get checked items
         checkedItems = self.getCheckedItems(self.rootTree)
 
-        print('\n')
-        print(checkedItems)
+        itemsToMerge = dict()
+        for checkedItem in checkedItems:
+            item = checkedItems[checkedItem]
+            if item:
+                itemsToMerge[checkedItem] = item
+
+        #print(itemsToMerge)
+        for i in itemsToMerge.items():
+            self.mergeSegments(segmentationNode, i[1], i[0]),
+
+        slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
+
+        slicer.mrmlScene.RemoveNode(segmentationNode)
+
         
