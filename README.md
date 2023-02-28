@@ -1,25 +1,61 @@
-# SlicerAtlasEditor - Slicer Extension
+# Atlas Editor extension
 
-### Notes
-For reference - Open Anatomy's Atlas Browser
-URL: https://github.com/mhalle/oabrowser/
+This is a 3D Slicer extension for editing and simplifying The Open Anatomy Project's atlas labelmaps by anatomical groups.
 
-Look at - how mike organised his tree structure in OABrowser:
-1. Function parse() in https://github.com/mhalle/oabrowser/blob/master/src/ng-providers/atlasJsonProvider.js
-2. Function dealWithAtlasStructure() in https://github.com/mhalle/oabrowser/blob/master/src/ng-providers/loadingManagerProvider.js
+<a href="https://www.openanatomy.org/">The Open Anatomy Project</a> aims to revolutionize the anatomy atlas by utilizing open data, fostering community-based collaborative development, and freely distributing medical knowledge. The project has several different digital anatomy atlases, including:
+- Mauritanian Anatomy Laboratory Thoracic Atlas
+- SPL/NAC Brain Atlas
+- SPL Liver Atlas
+- SPL Head and Neck Atlas
+- SPL Inner Ear Atlas
+- SPL Knee Atlas
+- SPL Abdominal Atlas
 
-Look at - how rudolf bumm merged segments through pythonSlicer:
-1. Function addSegmentToSegment() in https://github.com/rbumm/SlicerLungCTAnalyzer/blob/eca5aa39b7bd519954f3f1869de4d9210d582a69/LungCTSegmenter/LungCTSegmenter.py#L1535
+The Atlas Editor extension is useful for editing and simplifying these comprehensive digital anatomy atlases for customization and tailoring of the atlas content to specific needs. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study.
 
-Look at - how to use reusable segment editor functions in Slicer:
-https://apidocs.slicer.org/master/classqMRMLSegmentEditorWidget.html
+## Example
+#### Merging
+![](img/original-merge.png)
+![](img/output-merge.png)
 
-Look at - atlas structure schema:
-1. https://github.com/stity/mrmlToJson
-2. https://github.com/stity/atlas-schema
+#### Removing
+![](img/original-remove.png)
+![](img/output-remove.png)
 
-Look at - manipulating segments by Andras:
-1. https://gist.github.com/lassoan/7c94c334653010696b2bf96abc0ac8e7
+## Installation
 
-### Screenshot of Extension
-![](img/AtlasEditor.png)
+* Download and install a latest stable version of 3D Slicer (https://download.slicer.org).
+* Start 3D Slicer application, open the Extension Manager (menu: View / Extension manager)
+* Install AtlasEditor extension.
+
+## Tutorial
+
+* Start 3D Slicer
+* Load an atlas labelmap: Add Data -> Colortable (e.g. hncma-atlas-lut.ctbl) -> OK -> Add Data -> Labelmap (e.g. hncma-atlas.nrrd) -> Check Show Options -> Check 'Label Map' -> Change colortable to the one imported -> OK
+* Switch to "Atlas Editor" module
+* Set 'Input Atlas Label Map' as the atlas label map imported.
+* Set 'Input Atlas Structure (.json)' - available in Open Anatomy atlas repository (e.g. atlasStructure.json)
+* Set 'Output Atlas Label Map' as 'Create a LabelMapVolume' or the imported atlas if you want to edit the original.
+* Click 'Update' to show the hierachy tree structure from the json file.
+* Check items that is to be merged or removed.
+* Click 'Merge' or 'Remove'.
+
+## Visualize and save results
+* Open "Data" and turn on the visibility of the new labelmapvolume.
+* Convert labelmap to segmentation node to edit/visualise further.
+
+## Developers
+Open Anatomy's Atlas Browser
+https://github.com/mhalle/oabrowser/
+
+SPL/NAC Brain Atlas
+https://github.com/mhalle/spl-brain-atlas
+
+Atlas Structure Schema
+https://github.com/stity/mrmlToJson
+https://github.com/stity/atlas-schema
+
+## Acknowledgments
+This research was supported by an Australian Government Research Training Program (RTP) Scholarship.
+
+The Open Anatomy Browser: A Collaborative Web-Based Viewer for Interoperable Anatomy Atlases, Halle M, Demeusy V, Kikinis R. Front Neuroinform. 2017 Mar 27;11:22. doi:10.3389/fninf.2017.00022.
