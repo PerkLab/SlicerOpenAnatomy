@@ -67,3 +67,6 @@ The Open Anatomy Browser: A Collaborative Web-Based Viewer for Interoperable Ana
 Please post any questions to the [Slicer Forum](https://discourse.slicer.org).
 
 Andy Trung Huynh - andy.huynh@research.uwa.edu.au
+
+## License
+The code presented here is distributed under the Apache license (https://www.apache.org/licenses/LICENSE-2.0).

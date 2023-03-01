@@ -2,7 +2,6 @@ import vtk
 import qt
 import json
 
-
 import slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
