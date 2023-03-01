@@ -22,13 +22,13 @@ homepage https://github.com/andy9t7/SlicerAtlasEditor
 
 # Firstname1 Lastname1 ([SubOrg1, ]Org1), Firstname2 Lastname2 ([SubOrg2, ]Org2)
 # For example: Jane Roe (Superware), John Doe (Lab1, Nowhere), Joe Bloggs (Noware)
-contributors Andy Trung Huynh (Intelligent Systems for Medicine Laboratory - ISML, The University of Western Australia)
+contributors Andy Trung Huynh (The University of Western Australia, ISML)
 
 # Match category in the xml description of the module (where it shows up in Modules menu)
 category Segmentation
 
 # url to icon (png, size 128x128 pixels)
-iconurl https://raw.githubusercontent.com/lassoan/SlicerTotalSegmentator/main/TotalSegmentator.png
+iconurl https://raw.githubusercontent.com/andy9t7/SlicerAtlasEditor/main/AtlasEditor.png
 
 # Give people an idea what to expect from this code
 #  - Is it just a test or something you stand behind?
