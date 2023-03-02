@@ -62,6 +62,15 @@ Atlas Structure Schema
 https://github.com/stity/mrmlToJson   
 https://github.com/stity/atlas-schema
 
+## Future Work
+
+* Preview selected items/group in the viewer before clicking merging/remove.
+* Allow user to rearrange/categories different anatomical groups and create their own hierachal structure.
+* Display results in viewer.
+* Store hierachy information as segment tages (as list of key/value pairs for each segment) or store some ID in the segment tag to link the segment to OpenAnatomy metadata (Andras Lasso).
+* Display atlas in 3D using segmentation nodes and allow more segment editing operations (Andras Lasso).
+* Move/merge this extension with the SlicerOpenAnatomy extension (Andras Lasso).
+
 ## Acknowledgments
 This research was supported by an Australian Government Research Training Program (RTP) Scholarship.
 
