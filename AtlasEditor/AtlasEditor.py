@@ -422,14 +422,17 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             effect.setParameter("Operation","UNION")
             effect.self().onApply()
             print('Merge: ' + selectedSegmentID + ' with ' + modifierSegmentID)
-            
-    def getCheckedItems1(self):
-        "Needs work - only checks one item.. This one uses the widget itself instead of the tree item (less code)"
-        groups = []
-        for i in self.rootWidget.selectedItems():
-            groups.append(i.text(0))
         
-        return groups
+        print('Merged segment name: ' + mergedSegmentName)
+        segmentationNode.GetSegmentation().GetSegment(selectedSegmentID).SetName(mergedSegmentName)
+            
+    # def getCheckedItems1(self):
+    #     "Needs work - only checks one item.. This one uses the widget itself instead of the tree item (less code)"
+    #     groups = []
+    #     for i in self.rootWidget.selectedItems():
+    #         groups.append(i.text(0))
+        
+    #     return groups
 
     def merge(self, inputLabelMap, outputLabelMap):
         """
