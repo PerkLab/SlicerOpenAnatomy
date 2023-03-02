@@ -15,12 +15,17 @@ This is a 3D Slicer extension for editing and simplifying The Open Anatomy Proje
 
 The Atlas Editor  extension is useful for editing and simplifying these comprehensive digital anatomy atlases for customization and tailoring of the atlas content to specific needs. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study.
 
-## Example
+## Examples
 ### Merging
+#### Merging entire brain:
 ![](img/original-merge.png)
 ![](img/output-merge.png)
 
+#### Merging cerebellum:
+![](img/merge-cerebellum.png)
+
 ### Removing
+#### Removing skin, head and neck muscles:
 ![](img/original-remove.png)
 ![](img/output-remove.png)
 
