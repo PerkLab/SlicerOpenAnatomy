@@ -76,11 +76,26 @@ This research was supported by an Australian Government Research Training Progra
 
 The Open Anatomy Browser: A Collaborative Web-Based Viewer for Interoperable Anatomy Atlases, Halle M, Demeusy V, Kikinis R. Front Neuroinform. 2017 Mar 27;11:22. doi:10.3389/fninf.2017.00022.
 
+## License
+The code presented here is distributed under the Apache license (https://www.apache.org/licenses/LICENSE-2.0).
+
+<!-- ## Citing
+
+If you use SlicerAtlasEditor for your research, please consider adding the following citation:
+
+Huynh, A.H. (2023) Slicer Atlas Editor. Available at: https://github.com/andy9t7/SlicerAtlasEditor
+
+BibTeX:
+
+    @Misc{huynh_2023_sliceratlaseditor,
+      author =   {Andy T. Huynh},
+      title =    {{SlicerAtlasEditor} {A}tlas {E}ditor},
+      howpublished = {\url{https://github.com/andy9t7/SlicerAtlasEditor}},
+      year = 2023
+    } -->
+
 ## Contact
 
 Please post any questions to the [Slicer Forum](https://discourse.slicer.org).
 
 Andy Trung Huynh - andy.huynh@research.uwa.edu.au
-
-## License
-The code presented here is distributed under the Apache license (https://www.apache.org/licenses/LICENSE-2.0).
