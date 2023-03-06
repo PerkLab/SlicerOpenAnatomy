@@ -242,7 +242,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     atlasStructureJSON = []
     defaultAtlasID = ""
 
-    def buildTopHierarchy(self):
+    def buildTopHierarchy1(self):
         """
         Build the hierarchy of the atlas.
         """
@@ -256,7 +256,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         return groups
     
-    def buildHierarchy(self, currentTree, groups):
+    def buildHierarchy1(self, currentTree, groups):
         """
         Build the hierarchy of the atlas.
         """
@@ -274,6 +274,34 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                         for member in item['member']:
                             groups1.append(member)                     
                         self.buildHierarchy(child, groups1)
+
+    def buildHierarchy(self, currentTree, groups=None):
+        """
+        Build the hierarchy of the atlas.
+        """
+
+        if groups is None:
+            groups = []
+            for item in self.atlasStructureJSON:
+                if item['@id'] == self.defaultAtlasID:
+                    self.rootTree.setText(0, item['annotation']['name'])
+                    for member in item['member']:
+                        groups.append(member)
+
+        for group in groups:
+            for item in self.atlasStructureJSON:
+                if item['@id'] == group:
+                    child = qt.QTreeWidgetItem()
+                    currentTree.addChild(child)
+                    child.setText(0, item['annotation']['name'])
+                    child.setFlags(child.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+                    child.setCheckState(0, qt.Qt.Unchecked)
+                    if item['@type'] == "Group":
+                        groups1 = []
+                        for member in item['member']:
+                            groups1.append(member)
+                        self.buildHierarchy(child, groups1)
+
 
     def getCheckedItems(self, tree):
         """
@@ -328,8 +356,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.atlasStructureJSON = json.load(open(inputStructurePath))
 
         # get the tree of the structure
-        groups = self.buildTopHierarchy()
-        self.buildHierarchy(self.rootTree, groups)
+        self.buildHierarchy(self.rootTree)
 
         structureTreeWidget.expandToDepth(0)
 
@@ -421,18 +448,9 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             effect.setParameter("ModifierSegmentID",modifierSegmentID)
             effect.setParameter("Operation","UNION")
             effect.self().onApply()
-            print('Merge: ' + selectedSegmentID + ' with ' + modifierSegmentID)
         
         print('Merged segment name: ' + mergedSegmentName)
         segmentationNode.GetSegmentation().GetSegment(selectedSegmentID).SetName(mergedSegmentName)
-            
-    # def getCheckedItems1(self):
-    #     "Needs work - only checks one item.. This one uses the widget itself instead of the tree item (less code)"
-    #     groups = []
-    #     for i in self.rootWidget.selectedItems():
-    #         groups.append(i.text(0))
-        
-    #     return groups
 
     def merge(self, inputLabelMap, outputLabelMap):
         """
