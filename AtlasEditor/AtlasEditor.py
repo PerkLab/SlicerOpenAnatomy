@@ -198,7 +198,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.downloadAtlas(self.ui.atlasInputSelector.currentIndex, self.ui.atlasStructureInputPath, self.ui.structureTreeWidget)
+            self.logic.downloadAtlas(self.ui.atlasInputSelector.currentIndex, self.ui.atlasLabelMapInputSelector, self.ui.atlasStructureInputPath, self.ui.structureTreeWidget, self.ui.atlasLabelMapOutputSelector)
 
     def onMergeButton(self):
         """
@@ -287,7 +287,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             print(e)   
             return -1
 
-    def downloadAtlas(self, atlasIndex, atlasStructureInputPath, structureTree):
+    def downloadAtlas(self, atlasIndex, atlasInputNode, atlasStructureInputPath, structureTree, atlasOutputNode):
         """
 
         """
@@ -303,8 +303,11 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         atlas_lut = slicer.util.loadColorTable(atlas_lut_path)
         atlas = slicer.util.loadVolume(atlas_path, properties={'labelmap': True, 'colorNodeID': atlas_lut.GetID()})
         
+        # Update the 'Manually Import Atlas' fields
+        atlasInputNode.setCurrentNode(atlas)
+        atlasOutputNode.setCurrentNode(atlas)
+        
         atlasStructureInputPath.setCurrentPath(atlas_structure_path)
-
         self.updateStructureView(atlasStructureInputPath.currentPath, structureTree)
 
         return
