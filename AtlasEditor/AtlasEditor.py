@@ -83,6 +83,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.structureTreeWidget.setHeaderLabels(["Structure"])
 
         # Buttons
+        self.ui.downloadButton.connect('clicked(bool)', self.onDownloadButton)
         self.ui.mergeButton.connect('clicked(bool)', self.onMergeButton)
         self.ui.removeButton.connect('clicked(bool)', self.onRemoveButton)
         self.ui.updateButton.connect('clicked(bool)', self.onUpdateButton)
@@ -191,9 +192,17 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         self._parameterNode.EndModify(wasModified)
 
+    def onDownloadButton(self):
+        """
+        Run processing when user clicks "Download" button.
+        """
+        with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
+
+            self.logic.downloadAtlas(self.ui.atlasInputSelector.currentIndex)
+
     def onMergeButton(self):
         """
-        Run processing when user clicks "Apply" button.
+        Run processing when user clicks "Merge" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
@@ -201,7 +210,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     
     def onRemoveButton(self):
         """
-        Run processing when user clicks "Apply" button.
+        Run processing when user clicks "Remove" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
@@ -209,7 +218,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def onUpdateButton(self):
         """
-        Run processing when user clicks "Apply" button.
+        Run processing when user clicks "Update" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
             
@@ -241,6 +250,15 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     rootTree = None
     atlasStructureJSON = []
     defaultAtlasID = ""
+
+    def downloadAtlas(self, atlasIndex):
+        """
+
+        """
+        print(atlasIndex)
+
+        return
+
 
     def buildTopHierarchy1(self):
         """

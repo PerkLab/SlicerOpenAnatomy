@@ -6,79 +6,129 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>379</width>
-    <height>473</height>
+    <width>268</width>
+    <height>591</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="inputLabel_1">
+    <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton">
      <property name="text">
-      <string>Input Atlas Label Map:</string>
+      <string>Import OpenAnatomy Atlas:</string>
      </property>
+     <property name="collapsed">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="inputLabel_1a">
+        <property name="text">
+         <string>Atlas:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="atlasInputSelector">
+        <item>
+         <property name="text">
+          <string>SPL/NAC Brain Atlas</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SPL Liver Atlas</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SPL Head and Neck Atlas</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SPL Inner Ear Atlas</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SPL Knee Atlas</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SPL Abdominal Atlas</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="downloadButton">
+        <property name="text">
+         <string>Download</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="qMRMLNodeComboBox" name="atlasLabelMapInputSelector">
-     <property name="nodeTypes">
-      <stringlist notr="true">
-       <string>vtkMRMLLabelMapVolumeNode</string>
-      </stringlist>
+    <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton_2">
+     <property name="text">
+      <string>Manually Import Atlas:</string>
      </property>
-     <property name="hideChildNodeTypes">
-      <stringlist notr="true"/>
-     </property>
-     <property name="interactionNodeSingletonTag">
-      <string notr="true"/>
-     </property>
-     <property name="selectNodeUponCreation">
+     <property name="collapsed">
       <bool>true</bool>
      </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="inputLabel_2">
-     <property name="text">
-      <string>Input Atlas Structure (.json):</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="ctkPathLineEdit" name="atlasStructureInputPath"/>
-   </item>
-   <item>
-    <widget class="QPushButton" name="updateButton">
-     <property name="text">
-      <string>Update</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="outputLabel_2">
-     <property name="text">
-      <string>Output Atlas LabelMap:</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="qMRMLNodeComboBox" name="atlasLabelMapOutputSelector">
-     <property name="nodeTypes">
-      <stringlist notr="true">
-       <string>vtkMRMLLabelMapVolumeNode</string>
-      </stringlist>
-     </property>
-     <property name="hideChildNodeTypes">
-      <stringlist notr="true"/>
-     </property>
-     <property name="interactionNodeSingletonTag">
-      <string notr="true"/>
-     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QLabel" name="inputLabel_1">
+        <property name="text">
+         <string>Atlas Label Map:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="qMRMLNodeComboBox" name="atlasLabelMapInputSelector">
+        <property name="nodeTypes">
+         <stringlist notr="true">
+          <string>vtkMRMLLabelMapVolumeNode</string>
+         </stringlist>
+        </property>
+        <property name="hideChildNodeTypes">
+         <stringlist notr="true"/>
+        </property>
+        <property name="interactionNodeSingletonTag">
+         <string notr="true"/>
+        </property>
+        <property name="selectNodeUponCreation">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="inputLabel_2">
+        <property name="text">
+         <string>Atlas Structure (.json):</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="ctkPathLineEdit" name="atlasStructureInputPath"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="updateButton">
+        <property name="text">
+         <string>Update</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
     <widget class="QLabel" name="structureTreeLabel">
      <property name="text">
-      <string>Atlas Label Map Structure</string>
+      <string>Atlas Structure</string>
      </property>
     </widget>
    </item>
@@ -90,6 +140,50 @@
       </property>
      </column>
     </widget>
+   </item>
+   <item>
+    <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton_3">
+     <property name="text">
+      <string>Output</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <widget class="QLabel" name="outputLabel_2">
+        <property name="text">
+         <string>Output Atlas LabelMap:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="qMRMLNodeComboBox" name="atlasLabelMapOutputSelector">
+        <property name="nodeTypes">
+         <stringlist notr="true">
+          <string>vtkMRMLLabelMapVolumeNode</string>
+         </stringlist>
+        </property>
+        <property name="hideChildNodeTypes">
+         <stringlist notr="true"/>
+        </property>
+        <property name="interactionNodeSingletonTag">
+         <string notr="true"/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>100</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item>
     <widget class="QPushButton" name="mergeButton">
@@ -109,9 +203,21 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>ctkCollapsibleButton</class>
+   <extends>QWidget</extends>
+   <header>ctkCollapsibleButton.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>ctkPathLineEdit</class>
    <extends>QWidget</extends>
    <header>ctkPathLineEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLCollapsibleButton</class>
+   <extends>ctkCollapsibleButton</extends>
+   <header>qMRMLCollapsibleButton.h</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>
