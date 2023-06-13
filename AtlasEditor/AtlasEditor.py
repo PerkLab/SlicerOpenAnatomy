@@ -259,21 +259,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
         return
 
-
-    def buildTopHierarchy1(self):
-        """
-        Build the hierarchy of the atlas.
-        """
-
-        groups = []
-        for item in self.atlasStructureJSON:
-            if item['@id'] == self.defaultAtlasID:
-                self.rootTree.setText(0, item['annotation']['name'])
-                for member in item['member']:
-                    groups.append(member)
-
-        return groups
-
     def buildHierarchy(self, currentTree, groups=None):
         """
         Build the hierarchy of the atlas.
