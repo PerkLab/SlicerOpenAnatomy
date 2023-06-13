@@ -255,25 +255,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                     groups.append(member)
 
         return groups
-    
-    def buildHierarchy1(self, currentTree, groups):
-        """
-        Build the hierarchy of the atlas.
-        """
-
-        for group in groups:
-            for item in self.atlasStructureJSON:
-                if item['@id'] == group:
-                    child = qt.QTreeWidgetItem()
-                    currentTree.addChild(child)
-                    child.setText(0, item['annotation']['name'])
-                    child.setFlags(child.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
-                    child.setCheckState(0, qt.Qt.Unchecked)
-                    if item['@type'] == "Group":
-                        groups1 = []
-                        for member in item['member']:
-                            groups1.append(member)                     
-                        self.buildHierarchy(child, groups1)
 
     def buildHierarchy(self, currentTree, groups=None):
         """
@@ -484,5 +465,3 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
 
         slicer.mrmlScene.RemoveNode(segmentationNode)
-
-        
