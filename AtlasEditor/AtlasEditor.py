@@ -198,7 +198,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
 
-            self.logic.downloadAtlas(self.ui.atlasInputSelector.currentIndex)
+            self.logic.downloadAtlas(self.ui.atlasInputSelector.currentIndex, self.ui.atlasStructureInputPath, self.ui.structureTreeWidget)
 
     def onMergeButton(self):
         """
@@ -249,13 +249,63 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     rootWidget = None
     rootTree = None
     atlasStructureJSON = []
-    defaultAtlasID = ""
+    atlasRoot = [ "#Brain_Atlas", 
+        "#Liver_Segments",
+        "#Liver_Veins_and_Branches",
+        "#Aorta",
+        "#IVC",
+        "#MainPortalVein",
+        "#Other_Organs"]
 
-    def downloadAtlas(self, atlasIndex):
+    """
+    Dictionary of atlas data. Key is atlas ID, value is a list of URLs to download atlas data.
+    Key:
+        0: SPL/NAC Brain Atlas
+
+    List Index:
+        0: Atlas Label Map (.nrrd)
+        1: Atlas Color Table (.ctbl)
+        2: Atlas Structure (.json)
+
+    """
+    atlas_data = {
+        0: ["https://drive.google.com/uc?export=download&id=1sb_Syoi33pYwxCzCqITXyKrZAxRger5O",
+              "https://drive.google.com/uc?export=download&id=1ed-OuzGz6DNJ9DsYmQT2nQHN8r0s8FV7",
+              "https://drive.google.com/uc?export=download&id=13EyLeL7mAzY-duW25Jo-lvU5iIw7erHv"],
+        1: ["https://drive.google.com/uc?export=download&id=1ZdIiO7CjT5-27NtofimN16brsNbh2pjB",
+            "https://drive.google.com/uc?export=download&id=1oQ8gXMN8wFA5fhl7J9xydRtUcH4bDGHV",
+            "https://drive.google.com/uc?export=download&id=1TGzNZO-j5V1gJ5m_R1RjJPXI-zwXcdov"]
+    }
+
+    def downloadFromURL(self, url, filename):
+        try:         
+            print("Downloading file from " + url + " ...")
+            import urllib
+            urllib.request.urlretrieve(url, filename)
+        except Exception as e:
+            print("Error: can not download file  ...")
+            print(e)   
+            return -1
+
+    def downloadAtlas(self, atlasIndex, atlasStructureInputPath, structureTree):
         """
 
         """
-        print(atlasIndex)
+        cache_path = slicer.mrmlScene.GetCacheManager().GetRemoteCacheDirectory()
+        atlas_path = cache_path + "/atlas.nrrd"
+        atlas_lut_path = cache_path + "/atlas-lut.ctbl"
+        atlas_structure_path = cache_path + "/atlas-structure.json"
+
+        self.downloadFromURL(self.atlas_data[atlasIndex][0], atlas_path)
+        self.downloadFromURL(self.atlas_data[atlasIndex][1], atlas_lut_path)
+        self.downloadFromURL(self.atlas_data[atlasIndex][2], atlas_structure_path)
+
+        atlas_lut = slicer.util.loadColorTable(atlas_lut_path)
+        atlas = slicer.util.loadVolume(atlas_path, properties={'labelmap': True, 'colorNodeID': atlas_lut.GetID()})
+        
+        atlasStructureInputPath.setCurrentPath(atlas_structure_path)
+
+        self.updateStructureView(atlasStructureInputPath.currentPath, structureTree)
 
         return
 
@@ -267,7 +317,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         if groups is None:
             groups = []
             for item in self.atlasStructureJSON:
-                if item['@id'] == self.defaultAtlasID:
+                if item['@id'] in self.atlasRoot:
                     self.rootTree.setText(0, item['annotation']['name'])
                     for member in item['member']:
                         groups.append(member)

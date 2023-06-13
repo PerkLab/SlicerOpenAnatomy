@@ -14,7 +14,7 @@
    <item>
     <widget class="qMRMLCollapsibleButton" name="MRMLCollapsibleButton">
      <property name="text">
-      <string>Import OpenAnatomy Atlas:</string>
+      <string>Import Atlas via Open Anatomy:</string>
      </property>
      <property name="collapsed">
       <bool>false</bool>
@@ -64,7 +64,7 @@
       <item row="1" column="1">
        <widget class="QPushButton" name="downloadButton">
         <property name="text">
-         <string>Download</string>
+         <string>Download and Import</string>
         </property>
        </widget>
       </item>
