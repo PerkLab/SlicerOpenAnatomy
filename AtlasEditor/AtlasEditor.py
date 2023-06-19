@@ -222,7 +222,9 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
             
-            self.logic.updateStructureView(self.ui.atlasStructureInputPath.currentPath, self.ui.structureTreeWidget)
+            self.logic.setup(self.ui.atlasLabelMapInputSelector.currentNode(), self.ui.atlasLabelMapOutputSelector.currentNode(), self.ui.atlasStructureInputPath.currentPath, self.ui.structureTreeWidget)
+
+            self.logic.updateStructureView()
 
 
 #
@@ -239,24 +241,16 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
-
     def __init__(self):
         """
         Called when the logic class is instantiated. Can be used for initializing member variables.
         """
         ScriptedLoadableModuleLogic.__init__(self)
-
-    rootWidget = None
-    rootTree = None
-    atlasStructureJSON = []
-    atlasRoot = [ "#Brain_Atlas", 
-        "#Liver_Segments",
-        "#Liver_Veins_and_Branches",
-        "#Aorta",
-        "#IVC",
-        "#MainPortalVein",
-        "#Other_Organs"]
-
+        self.atlasInputLabelMapVolumeNode = None
+        self.atlasOutputLabelMapVolumeNode = None
+        self.atlasStructureTreeWidget = None
+        self.atlasStructureJSON = None
+        self.atlasStructureTree = None
     """
     Dictionary of atlas data. Key is atlas ID, value is a list of URLs to download atlas data.
     Key:
@@ -271,11 +265,20 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
     atlas_data = {
         0: ["https://drive.google.com/uc?export=download&id=1sb_Syoi33pYwxCzCqITXyKrZAxRger5O",
               "https://drive.google.com/uc?export=download&id=1ed-OuzGz6DNJ9DsYmQT2nQHN8r0s8FV7",
-              "https://drive.google.com/uc?export=download&id=13EyLeL7mAzY-duW25Jo-lvU5iIw7erHv"],
+              "https://drive.google.com/uc?export=download&id=17_NLdqOVEiAxQtOuhcFcOZTuEBlvbYHd"],
         1: ["https://drive.google.com/uc?export=download&id=1ZdIiO7CjT5-27NtofimN16brsNbh2pjB",
             "https://drive.google.com/uc?export=download&id=1oQ8gXMN8wFA5fhl7J9xydRtUcH4bDGHV",
             "https://drive.google.com/uc?export=download&id=1TGzNZO-j5V1gJ5m_R1RjJPXI-zwXcdov"]
     }
+
+    def setup(self, atlasInputLabelMapVolumeNode, atlasOutputLabelMapVolumeNode, atlasStructureJsonPath, atlasStructureTreeWidget):
+        """
+        Setup variables for atlas editor
+        """
+        self.atlasInputLabelMapVolumeNode = atlasInputLabelMapVolumeNode
+        self.atlasOutputLabelMapVolumeNode = atlasOutputLabelMapVolumeNode
+        self.atlasStructureJSON = json.load(open(atlasStructureJsonPath))
+        self.atlasStructureTreeWidget = atlasStructureTreeWidget
 
     def downloadFromURL(self, url, filename):
         try:         
@@ -308,23 +311,31 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         atlasOutputNode.setCurrentNode(atlas)
         
         atlasStructureInputPath.setCurrentPath(atlas_structure_path)
-        self.updateStructureView(atlasStructureInputPath.currentPath, structureTree)
+        self.setup(atlasInputNode.currentNode(), atlasOutputNode.currentNode(), atlasStructureInputPath.currentPath, structureTree)
+        self.updateStructureView()
 
         return
 
-    def buildHierarchy(self, currentTree, groups=None):
+    def buildHierarchy(self, currentTree = None, groups=None):
         """
         Build the hierarchy of the atlas.
         """
-
-        if groups is None:
+        if currentTree is None and groups is None:
             groups = []
+            root = []
             for item in self.atlasStructureJSON:
-                if item['@id'] in self.atlasRoot:
-                    self.rootTree.setText(0, item['annotation']['name'])
+                if item['@id'] == "#__header__":
+                    for member in item['root']:
+                        root.append(member)
+            
+            for item in self.atlasStructureJSON:
+                if item['@id'] in root:
+                    currentTree = qt.QTreeWidgetItem(self.atlasStructureTreeWidget)
+                    currentTree.setFlags(currentTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+                    currentTree.setText(0, item['annotation']['name'])
                     for member in item['member']:
                         groups.append(member)
-
+            
         for group in groups:
             for item in self.atlasStructureJSON:
                 if item['@id'] == group:
@@ -373,29 +384,17 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         return checked
 
 
-    def updateStructureView(self, inputStructurePath, structureTreeWidget):
+    def updateStructureView(self):
         """
         Update the structure view of the atlas.
         """
             
         # clear the tree
-        structureTreeWidget.clear()
-
-        # initiate atlas type
-        self.defaultAtlasID = "#Brain_Atlas"
-
-        # initiate the tree
-        self.rootWidget = structureTreeWidget
-        self.rootTree = qt.QTreeWidgetItem(structureTreeWidget)
-        self.rootTree.setFlags(self.rootTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
-
-        # initiate the json path
-        self.atlasStructureJSON = json.load(open(inputStructurePath))
-
+        self.atlasStructureTreeWidget.clear()
         # get the tree of the structure
-        self.buildHierarchy(self.rootTree)
+        self.buildHierarchy()
 
-        structureTreeWidget.expandToDepth(0)
+        self.atlasStructureTreeWidget.expandToDepth(0)
 
     def getStructureIdOfGroups(self, groups):
         structureIds = []
@@ -419,7 +418,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                 if item['annotation']['name'] == name:
                     return item['@id']  
         
-
     def remove(self, inputLabelMap, outputLabelMap):
         """
         Run the processing algorithm.
