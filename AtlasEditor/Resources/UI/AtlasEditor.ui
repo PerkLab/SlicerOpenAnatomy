@@ -134,6 +134,9 @@
    </item>
    <item>
     <widget class="QTreeWidget" name="structureTreeWidget">
+     <attribute name="headerVisible">
+      <bool>false</bool>
+     </attribute>
      <column>
       <property name="text">
        <string notr="true">1</string>
@@ -250,14 +253,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>AtlasEditor</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <sender>atlasStructureInputPath</sender>
+   <signal>currentPathChanged(QString)</signal>
    <receiver>atlasStructureInputPath</receiver>
-   <slot>addCurrentPathToHistory()</slot>
+   <slot>setCurrentPath(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>189</x>
-     <y>236</y>
+     <x>133</x>
+     <y>196</y>
     </hint>
     <hint type="destinationlabel">
      <x>189</x>

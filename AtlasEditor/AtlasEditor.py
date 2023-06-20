@@ -6,7 +6,6 @@ import slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
-
 #
 # AtlasEditor
 #
@@ -18,13 +17,11 @@ class AtlasEditor(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "Atlas Editor"  # TODO: make this more human readable by adding spaces
-        self.parent.categories = ["Segmentation"]  # TODO: set categories (folders where the module shows up in the module selector)
-        self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-        self.parent.contributors = ["Andy Huynh (University of Western Australia)"]  # TODO: replace with "Firstname Lastname (Organization)"
-        # TODO: update with short description of the module and a link to online module documentation
+        self.parent.title = "Atlas Editor"  
+        self.parent.categories = ["OpenAnatomy"]  
+        self.parent.dependencies = []  
+        self.parent.contributors = ["Andy Huynh (University of Western Australia)"] 
         self.parent.helpText = """"""
-        # TODO: replace with organization, grant and thanks
         self.parent.acknowledgementText = """"""
 
 #
@@ -78,9 +75,7 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         self.ui.atlasLabelMapInputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI) #vtkMRMLLabelMapVolumeNode
         self.ui.atlasLabelMapOutputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI) #vtkMRMLLabelMapVolumeNode
-
-        # Initialize Structure Tree GUI
-        self.ui.structureTreeWidget.setHeaderLabels(["Structure"])
+        self.ui.atlasStructureInputPath.connect("currentPathChanged(QString)", self.updateParameterNodeFromGUI)
 
         # Buttons
         self.ui.downloadButton.connect('clicked(bool)', self.onDownloadButton)
@@ -168,10 +163,34 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self._updatingGUIFromParameterNode = True
 
         # Update node selectors and sliders
-        #self.ui.atlasLabelMapInputSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputLabelMap"))
+        self.ui.atlasLabelMapInputSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputLabelMap"))
+        self.ui.atlasLabelMapOutputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputLabelMap"))
+        self.ui.atlasStructureInputPath.setCurrentPath(self._parameterNode.GetParameter("InputStructurePath"))
 
         # Update buttons states and tooltips
+        # Update button
+        if self._parameterNode.GetNodeReference("InputLabelMap") and len(self.ui.atlasStructureInputPath.currentPath) > 1:
+            self.ui.updateButton.toolTip = "Update atlas structure tree widget."
+            self.ui.updateButton.enabled = True
+        else:
+            self.ui.updateButton.toolTip = "Import input label map and atlas structure json file."
+            self.ui.updateButton.enabled = False
+        
+        # Merge button
+        if self._parameterNode.GetNodeReference("InputLabelMap") and self._parameterNode.GetNodeReference("OutputLabelMap"):
+            self.ui.mergeButton.toolTip = "Merge input label map and output label map."
+            self.ui.mergeButton.enabled = True
+        else:
+            self.ui.mergeButton.toolTip = "Select input label map and output label map."
+            self.ui.mergeButton.enabled = False
 
+        # Remove button
+        if self._parameterNode.GetNodeReference("InputLabelMap") and self._parameterNode.GetNodeReference("OutputLabelMap"):
+            self.ui.removeButton.toolTip = "Remove input label map and output label map."
+            self.ui.removeButton.enabled = True
+        else:
+            self.ui.removeButton.toolTip = "Select input label map and output label map."
+            self.ui.removeButton.enabled = False
 
         # All the GUI updates are done
         self._updatingGUIFromParameterNode = False
@@ -189,6 +208,8 @@ class AtlasEditorWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         self._parameterNode.SetNodeReferenceID("InputLabelMap", self.ui.atlasLabelMapInputSelector.currentNodeID)
         self._parameterNode.SetNodeReferenceID("OutputLabelMap", self.ui.atlasLabelMapOutputSelector.currentNodeID)
+        self._parameterNode.SetParameter("InputStructurePath", self.ui.atlasStructureInputPath.currentPath)
+
 
         self._parameterNode.EndModify(wasModified)
 
@@ -252,14 +273,15 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.atlasStructureJSON = None
         self.atlasStructureTree = None
     """
-    Dictionary of atlas data. Key is atlas ID, value is a list of URLs to download atlas data.
+    Dictionary of atlas_data. Key is atlas ID, value is a list of URLs to download atlas data.
     Key:
-        0: SPL/NAC Brain Atlas
+        0: SPL/NAC Brain Atlas 
+        1: SPL Liver Atlas
 
     List Index:
-        0: Atlas Label Map (.nrrd)
-        1: Atlas Color Table (.ctbl)
-        2: Atlas Structure (.json)
+        0: Atlas Label Map (.nrrd) URL
+        1: Atlas Color Table (.ctbl) URL
+        2: Atlas Structure (.json) URL
 
     """
     atlas_data = {
@@ -281,6 +303,9 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.atlasStructureTreeWidget = atlasStructureTreeWidget
 
     def downloadFromURL(self, url, filename):
+        """
+        Download file from URL and save to filename (folder must exist)
+        """
         try:         
             print("Downloading file from " + url + " ...")
             import urllib
@@ -292,17 +317,25 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
     def downloadAtlas(self, atlasIndex, atlasInputNode, atlasStructureInputPath, structureTree, atlasOutputNode):
         """
-
+        Download atlas data from URL and load into Slicer
         """
+        # Checks if atlas is supported from the atlas selector
+        if atlasIndex != 0:
+            slicer.util.errorDisplay("Atlas not yet supported.", waitCursor=True)
+            return
+        
+        # Set up paths for downloading atlas data using Slicer's cache directory
         cache_path = slicer.mrmlScene.GetCacheManager().GetRemoteCacheDirectory()
         atlas_path = cache_path + "/atlas.nrrd"
         atlas_lut_path = cache_path + "/atlas-lut.ctbl"
         atlas_structure_path = cache_path + "/atlas-structure.json"
 
+        # Download atlas data from atlas_data dictionary
         self.downloadFromURL(self.atlas_data[atlasIndex][0], atlas_path)
         self.downloadFromURL(self.atlas_data[atlasIndex][1], atlas_lut_path)
         self.downloadFromURL(self.atlas_data[atlasIndex][2], atlas_structure_path)
 
+        # Load atlas data into Slicer as a labelmap volume
         atlas_lut = slicer.util.loadColorTable(atlas_lut_path)
         atlas = slicer.util.loadVolume(atlas_path, properties={'labelmap': True, 'colorNodeID': atlas_lut.GetID()})
         
@@ -311,6 +344,8 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         atlasOutputNode.setCurrentNode(atlas)
         
         atlasStructureInputPath.setCurrentPath(atlas_structure_path)
+
+        # Sets up variables and Update the 'Atlas Structure' tree widget
         self.setup(atlasInputNode.currentNode(), atlasOutputNode.currentNode(), atlasStructureInputPath.currentPath, structureTree)
         self.updateStructureView()
 
@@ -318,8 +353,9 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
     def buildHierarchy(self, currentTree = None, groups=None):
         """
-        Build the hierarchy of the atlas.
+        Build the hierarchy of the atlas in the widget tree.
         """
+        # If currentTree is None -> we set up the root of the tree.
         if currentTree is None and groups is None:
             groups = []
             root = []
@@ -330,12 +366,14 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             
             for item in self.atlasStructureJSON:
                 if item['@id'] in root:
-                    currentTree = qt.QTreeWidgetItem(self.atlasStructureTreeWidget)
-                    currentTree.setFlags(currentTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
-                    currentTree.setText(0, item['annotation']['name'])
+                    self.atlasStructureTree = qt.QTreeWidgetItem(self.atlasStructureTreeWidget)
+                    self.atlasStructureTree.setFlags(self.atlasStructureTree.flags() | qt.Qt.ItemIsTristate | qt.Qt.ItemIsUserCheckable)
+                    self.atlasStructureTree.setText(0, item['annotation']['name'])
+                    currentTree = self.atlasStructureTree
                     for member in item['member']:
                         groups.append(member)
-            
+        
+        # If currentTree is not None -> We are set up the children of the tree.
         for group in groups:
             for item in self.atlasStructureJSON:
                 if item['@id'] == group:
@@ -349,21 +387,28 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                         for member in item['member']:
                             groups1.append(member)
                         self.buildHierarchy(child, groups1)
-
-
-    def getCheckedItems(self, tree):
+    
+    def updateStructureView(self):
         """
-        Get the checked items of the structure view.
+        Update the structure view of the atlas.
         """
+        # clear the tree
+        self.atlasStructureTreeWidget.clear()
+        self.buildHierarchy()
+        self.atlasStructureTreeWidget.expandToDepth(0)
 
+    def getCheckedItems(self):
+        """
+        Helper function to get the checked items of the structure view for mergined/removing functions.
+        """
         checked = dict()
 
-        signal_count = tree.childCount()
+        signal_count = self.atlasStructureTree.childCount()
 
         for i in range(signal_count):
-            if tree.child(i).checkState(0) == qt.Qt.Checked:
+            if self.atlasStructureTree.child(i).checkState(0) == qt.Qt.Checked:
 
-                signal = tree.child(i)
+                signal = self.atlasStructureTree.child(i)
                 checked_sweeps = list()
                 num_children = signal.childCount()
 
@@ -373,30 +418,17 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                     if child.checkState(0) == qt.Qt.Checked:
                         checked_sweeps.append(child.text(0))
 
-                    # if child.childCount() > 0:
-                    #     checked.update(self.getCheckedItems(child))
-
                 checked[signal.text(0)] = checked_sweeps
             
-            elif tree.child(i).checkState(0) == qt.Qt.PartiallyChecked:
-                checked.update(self.getCheckedItems(tree.child(i)))
+            elif self.atlasStructureTree.child(i).checkState(0) == qt.Qt.PartiallyChecked:
+                checked.update(self.getCheckedItems(self.atlasStructureTree.child(i)))
 
         return checked
 
-
-    def updateStructureView(self):
-        """
-        Update the structure view of the atlas.
-        """
-            
-        # clear the tree
-        self.atlasStructureTreeWidget.clear()
-        # get the tree of the structure
-        self.buildHierarchy()
-
-        self.atlasStructureTreeWidget.expandToDepth(0)
-
     def getStructureIdOfGroups(self, groups):
+        """
+        Helper function to get the structure ids of the groups for merging/removing function.
+        """
         structureIds = []
         for group in groups:
             for item in self.atlasStructureJSON:
@@ -404,7 +436,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                     if item['@type'] == "Structure":
                         if "-" in item['annotation']['name']:
                             structureIds.append(item['annotation']['name'].replace("-", " "))
-                            #print(item['annotation']['name'].replace("-", " "))
                         else:
                             structureIds.append(item['annotation']['name'])
                     if item['@type'] == "Group":
@@ -413,6 +444,9 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         return structureIds
     
     def getIdfromName(self, name):
+        """
+        Helper function to get the ids by name for merging/removing function.
+        """
         for item in self.atlasStructureJSON:
             if (item['@type'] == "Structure" or item['@type'] == "Group"):
                 if item['annotation']['name'] == name:
@@ -424,7 +458,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         Can be used without GUI widget.
         """
         groupsToRemove = []
-        checkedItems = self.getCheckedItems(self.rootTree)
+        checkedItems = self.getCheckedItems()
         for checkedItem in checkedItems:
             group = checkedItems[checkedItem]
             if group:
@@ -460,7 +494,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         for group in segmentsToMerge:
             groupIdsToMerge.append(self.getIdfromName(group))
         structureIds = self.getStructureIdOfGroups(groupIdsToMerge)
-        print(structureIds)
 
         # Create temporary segment editor to get access to effects
         self.segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
@@ -484,7 +517,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             effect.setParameter("Operation","UNION")
             effect.self().onApply()
         
-        print('Merged segment name: ' + mergedSegmentName)
         segmentationNode.GetSegmentation().GetSegment(selectedSegmentID).SetName(mergedSegmentName)
 
     def merge(self, inputLabelMap, outputLabelMap):
@@ -492,8 +524,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         Run the processing algorithm.
         Can be used without GUI widget.
         """
-        print('\nMerging...')
-
         # Create segmentation
         segmentationNode = slicer.vtkMRMLSegmentationNode()
         slicer.mrmlScene.AddNode(segmentationNode)
@@ -504,7 +534,7 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         slicer.vtkSlicerSegmentationsModuleLogic.ImportLabelmapToSegmentationNode(inputLabelMap, segmentationNode)
 
         # Get checked items
-        checkedItems = self.getCheckedItems(self.rootTree)
+        checkedItems = self.getCheckedItems(self.atlasStructureTree)
 
         itemsToMerge = dict()
         for checkedItem in checkedItems:
@@ -512,7 +542,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
             if item:
                 itemsToMerge[checkedItem] = item
 
-        #print(itemsToMerge)
         for i in itemsToMerge.items():
             self.mergeSegments(segmentationNode, i[1], i[0]),
 
