@@ -17,7 +17,7 @@ class AtlasEditor(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "Atlas Editor"  
+        self.parent.title = "OpenAnatomy AtlasEditor"  
         self.parent.categories = ["OpenAnatomy"]  
         self.parent.dependencies = []  
         self.parent.contributors = ["Andy Huynh (University of Western Australia)"] 
