@@ -20,7 +20,7 @@ class AtlasEditor(ScriptedLoadableModule):
         self.parent.title = "OpenAnatomy AtlasEditor"  
         self.parent.categories = ["OpenAnatomy"]  
         self.parent.dependencies = []  
-        self.parent.contributors = ["Andy Huynh (University of Western Australia)"] 
+        self.parent.contributors = ["Andy Huynh (ISML, University of Western Australia)"] 
         self.parent.helpText = """"""
         self.parent.acknowledgementText = """"""
 
