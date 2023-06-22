@@ -6,7 +6,7 @@
 
 This module exports a model hierarchy or segmentation node from 3D Slicer into a single glTF or OBJ file, including all the model colors and opacities; and for glTF also model hierarchy and model names.
 
-![OpenAnatomy Exporter module screenshot](Screenshot03.png)
+![OpenAnatomy Exporter module screenshot](img/Screenshot03.png)
 
 ## Quick start
 
@@ -48,7 +48,7 @@ Open a glTF files stored in a github repository:
 
 https://3dviewer.net/#model=https://raw.githubusercontent.com/lassoan/Test/master/SPL-Abdominal-Atlas.gltf
 
-![Exported glTF file viewed in 3dviewer.net](Screenshot02.png)
+![Exported glTF file viewed in 3dviewer.net](img/Screenshot02.png)
 
 Embed 3dviewer.net in a website:
 
