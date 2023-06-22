@@ -1,8 +1,8 @@
-# Atlas Editor extension
+# Atlas Editor module
 
 <img src="AtlasEditor.png" alt= “” width="256" height="256">
 
-This is a 3D Slicer extension for editing and simplifying The Open Anatomy Project's atlas labelmaps by anatomical groups.
+This is a 3D Slicer module for editing and simplifying The Open Anatomy Project's atlas labelmaps by anatomical groups.
 
 <a href="https://www.openanatomy.org/">The Open Anatomy Project</a> aims to revolutionize the anatomy atlas by utilizing open data, fostering community-based collaborative development, and freely distributing medical knowledge. The project has several different digital anatomy atlases, including:
 - Mauritanian Anatomy Laboratory Thoracic Atlas
@@ -13,7 +13,7 @@ This is a 3D Slicer extension for editing and simplifying The Open Anatomy Proje
 - SPL Knee Atlas
 - SPL Abdominal Atlas
 
-The Atlas Editor  extension is useful for editing and simplifying these comprehensive digital anatomy atlases for customization and tailoring of the atlas content to specific needs. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study.
+The Atlas Editor module is useful for editing and simplifying these comprehensive digital anatomy atlases for customization and tailoring of the atlas content to specific needs. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study.
 
 ## Examples
 ### Merging
@@ -79,7 +79,7 @@ The Open Anatomy Browser: A Collaborative Web-Based Viewer for Interoperable Ana
 ## License
 The code presented here is distributed under the Apache license (https://www.apache.org/licenses/LICENSE-2.0).
 
-<!-- ## Citing
+## Citing
 
 If you use SlicerAtlasEditor for your research, please consider adding the following citation:
 
@@ -92,7 +92,7 @@ BibTeX:
       title =    {{SlicerAtlasEditor} {A}tlas {E}ditor},
       howpublished = {\url{https://github.com/andy9t7/SlicerAtlasEditor}},
       year = 2023
-    } -->
+    }
 
 ## Contact
 
