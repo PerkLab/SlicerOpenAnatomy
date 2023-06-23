@@ -14,11 +14,15 @@ Slicer Open Anatomy extension provides tools for loading, manipulating, exportin
 - SPL Abdominal Atlas
 
 ## Modules
-[OpenAnatomy Export](OpenAnatomyExport/README.md)    
+### [OpenAnatomy Export](OpenAnatomyExport/README.md)    
 This module exports a model hierarchy or segmentation node from 3D Slicer into a single glTF or OBJ file, including all the model colors and opacities; and for glTF also model hierarchy and model names.
+  
+![OpenAnatomy Exporter module screenshot](OpenAnatomyExport/img/Screenshot03.png)
 
-[AtlasEditor](AtlasEditor/README.md)  
+### [AtlasEditor](AtlasEditor/README.md)  
 This module is for editing and simplifying Open Anatomy's atlases. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study using a hierarchy JSON schema.
+  
+![AtlasEditor module screenshot](AtlasEditor/img/merge-cerebellum.png)
 
 ## Installation
 1. Install and open 3D Slicer (https://download.slicer.org).
