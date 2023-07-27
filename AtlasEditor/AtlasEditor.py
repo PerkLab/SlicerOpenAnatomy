@@ -349,7 +349,6 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.setup(atlasInputNode.currentNode(), atlasOutputNode.currentNode(), atlasStructureInputPath.currentPath, structureTree)
         self.updateStructureView()
 
-        return
 
     def buildHierarchy(self, currentTree = None, groups=None):
         """
@@ -397,18 +396,20 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         self.buildHierarchy()
         self.atlasStructureTreeWidget.expandToDepth(0)
 
-    def getCheckedItems(self):
+    def getCheckedItems(self, tree=None):
         """
         Helper function to get the checked items of the structure view for mergined/removing functions.
         """
         checked = dict()
 
-        signal_count = self.atlasStructureTree.childCount()
+        if tree is None:
+            tree = self.atlasStructureTree
+        signal_count = tree.childCount()
 
         for i in range(signal_count):
-            if self.atlasStructureTree.child(i).checkState(0) == qt.Qt.Checked:
+            if tree.child(i).checkState(0) == qt.Qt.Checked:
 
-                signal = self.atlasStructureTree.child(i)
+                signal = tree.child(i)
                 checked_sweeps = list()
                 num_children = signal.childCount()
 
@@ -420,8 +421,8 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
 
                 checked[signal.text(0)] = checked_sweeps
             
-            elif self.atlasStructureTree.child(i).checkState(0) == qt.Qt.PartiallyChecked:
-                checked.update(self.getCheckedItems(self.atlasStructureTree.child(i)))
+            elif tree.child(i).checkState(0) == qt.Qt.PartiallyChecked:
+                checked.update(self.getCheckedItems(tree.child(i)))
 
         return checked
 
@@ -479,14 +480,36 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         segmentationNode.CreateDefaultDisplayNodes() # only needed for display
         segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(inputLabelMap)
 
+        slicer.util.showStatusMessage("Import to segmentation")
+        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
         slicer.vtkSlicerSegmentationsModuleLogic.ImportLabelmapToSegmentationNode(inputLabelMap, segmentationNode)
 
-        for structureId in structureIds:
-            segmentationNode.RemoveSegment(structureId)
+        segmentsNotFound = []
+        for i, structureId in enumerate(structureIds):
+            slicer.util.showStatusMessage(f"Merging segment ({i}/{len(structureIds)}): {structureId}")
+            slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+            segmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(structureId)
+            if not segmentID:
+                segmentsNotFound.append(structureId)
+                continue
+            segmentationNode.RemoveSegment(segmentID)
 
+        slicer.util.showStatusMessage("Export to labelmap")
+        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+        slicer.app.pauseRender()
         slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
 
+        slicer.util.showStatusMessage("Cleanup", 1000)
+        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+
         slicer.mrmlScene.RemoveNode(segmentationNode)
+        slicer.app.resumeRender()
+        if segmentsNotFound:
+            raise RuntimeError(f"Failed to remove segments (they were not found in the segmentation): {segmentsNotFound}")
+
+        slicer.util.showStatusMessage("Done", 1000)
+        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+        
 
     def mergeSegments(self, segmentationNode, segmentsToMerge, mergedSegmentName):
 
@@ -496,28 +519,43 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
         structureIds = self.getStructureIdOfGroups(groupIdsToMerge)
 
         # Create temporary segment editor to get access to effects
-        self.segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
-        self.segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+        segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
+        segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
         self.segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
-        self.segmentEditorWidget.setMRMLSegmentEditorNode(self.segmentEditorNode)
-        
-        firstSegment = structureIds[0]
+        segmentEditorWidget.setMRMLSegmentEditorNode(self.segmentEditorNode)
+        segmentEditorWidget.setSegmentationNode(segmentationNode)
+        self.segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteAllSegments) 
+        self.segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
 
-        for i in range(len(structureIds) - 1):
-            modifierSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(structureIds[i + 1])
-            selectedSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(firstSegment)
-            self.segmentEditorWidget.setSegmentationNode(segmentationNode)
-            self.segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteAllSegments) 
-            self.segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
-            self.segmentEditorNode.SetSelectedSegmentID(selectedSegmentID)
-            self.segmentEditorWidget.setActiveEffectByName("Logical operators")
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.setParameter("BypassMasking","0")
+        segmentsNotFound = []        
+        firstSegment = structureIds[0]
+        selectedSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(firstSegment)
+        if not selectedSegmentID:
+            segmentsNotFound.append(structureId)
+            return segmentsNotFound
+        self.segmentEditorNode.SetSelectedSegmentID(selectedSegmentID)
+
+        segmentEditorWidget.setActiveEffectByName("Logical operators")
+        effect = segmentEditorWidget.activeEffect()
+        effect.setParameter("BypassMasking","0")
+        effect.setParameter("Operation","UNION")
+
+        for i, structureId in enumerate(structureIds):
+            if i == 0:
+                # We add all other segments to the first one
+                continue
+            slicer.util.showStatusMessage(f"Merging segment ({i}/{len(structureIds)}): {structureId}", 1000)
+            slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+            modifierSegmentID = segmentationNode.GetSegmentation().GetSegmentIdBySegmentName(structureId)
+            if not modifierSegmentID:
+                segmentsNotFound.append(structureId)
+                continue
             effect.setParameter("ModifierSegmentID",modifierSegmentID)
-            effect.setParameter("Operation","UNION")
             effect.self().onApply()
         
         segmentationNode.GetSegmentation().GetSegment(selectedSegmentID).SetName(mergedSegmentName)
+
+        return segmentsNotFound
 
     def merge(self, inputLabelMap, outputLabelMap):
         """
@@ -543,8 +581,11 @@ class AtlasEditorLogic(ScriptedLoadableModuleLogic):
                 itemsToMerge[checkedItem] = item
 
         for i in itemsToMerge.items():
-            self.mergeSegments(segmentationNode, i[1], i[0]),
+            segmentsNotFound = self.mergeSegments(segmentationNode, i[1], i[0])
 
         slicer.vtkSlicerSegmentationsModuleLogic.ExportAllSegmentsToLabelmapNode(segmentationNode, outputLabelMap)
 
         slicer.mrmlScene.RemoveNode(segmentationNode)
+
+        if segmentsNotFound:
+            raise RuntimeError(f"Failed to merge segments (they were not found in the segmentation): {segmentsNotFound}")
