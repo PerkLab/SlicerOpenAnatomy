@@ -119,7 +119,7 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     """Append text to log window
     """
     self.ui.statusLabel.appendPlainText(text)
-    slicer.app.processEvents() # force update 
+    slicer.app.processEvents() # force update
 
 #
 # OpenAnatomyExportLogic
@@ -272,12 +272,35 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         # Set up root node
         rootNodeIndex = len(self._gltfNodes)-1
 
+        # According to glTF specifications (3.4. Coordinate System and Units
+        # https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units):
+        #
+        #   glTF uses a right-handed coordinate system. glTF defines +Y as up, +Z as forward, and -X as right; the front of a glTF asset faces +Z.
+        #   The units for all linear distances are meters.
+
         # View up direction in glTF is +Y.
-        # We map that to anatomical S direction by this transform (LSA coordinate system).
+        # We map that to anatomical S direction by this transform (from LPS to LSA coordinate system).
+
+        # Default coordinate system unit in Slicer is millimeters, therefore we need to scale the model
+        # from the scene's length unit. Currently only "mm" and "m" units are supported.
+        selectionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSelectionNodeSingleton")
+        unitNode = slicer.mrmlScene.GetNodeByID(selectionNode.GetUnitNodeID("length"))
+        lengthUnitSuffix = unitNode.GetSuffix()
+        if lengthUnitSuffix == "mm":
+          scaleToMeters = 0.001
+        elif lengthUnitSuffix == "m":
+          scaleToMeters = 1.0
+        else:
+          msg = f"Unsupported length unit ({lengthUnitSuffix}). Exported glTF file will not be scaled to meters!"
+          self.addLog(msg)
+          logging.warning(msg)
+          scaleToMeters = 1.0
+
+        # Transform from LPS coordinate system (in millimeters) to LSA coordinate system (in meters)
         jsonData['nodes'][rootNodeIndex]['matrix'] = [
-            1.0,    0.0,    0.0,    0.0,
-            0.0,    0.0,   -1.0,    0.0,
-            0.0,    1.0,    0.0,    0.0,
+            scaleToMeters,    0.0,    0.0,    0.0,
+            0.0,    0.0,   -scaleToMeters,    0.0,
+            0.0,    scaleToMeters,    0.0,    0.0,
             0.0,    0.0,    0.0,    1.0
             ]
 
@@ -389,7 +412,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             gltfMeshNodeIndex = len(self._gltfNodes)
             self._gltfNodes.append({'mesh': gltfMeshIndex, 'name': meshName})
             gltfFolderNodeChildren.append(gltfMeshNodeIndex)
-          
+
           if dataNode and dataNode.IsA("vtkMRMLMarkupsPlaneNode"):
             slicer.mrmlScene.RemoveNode(inputModelNode)
 
