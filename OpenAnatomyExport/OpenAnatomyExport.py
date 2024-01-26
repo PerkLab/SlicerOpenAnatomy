@@ -5,6 +5,9 @@ from unittest.runner import TextTestResult
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+import sys
+import subprocess
+
 
 #
 # OpenAnatomyExport
@@ -24,6 +27,7 @@ class OpenAnatomyExport(ScriptedLoadableModule):
     self.parent.helpText = """
 Export model hierarchy or segmentation to OpenAnatomy-compatible glTF file.
 """
+    self.logic = None
     self.parent.helpText += self.getDefaultModuleDocumentationLink()
     self.parent.acknowledgementText = """
 """ # replace with organization, grant and thanks.
@@ -38,6 +42,8 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
   """
 
   def setup(self):
+    self.logic = OpenAnatomyExportLogic()
+    
     ScriptedLoadableModuleWidget.setup(self)
 
     self.logic = OpenAnatomyExportLogic()
@@ -71,7 +77,22 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
+  
     currentItemId = self.ui.inputSelector.currentItem()
+    
+    currentItemId = self.ui.inputSelector.currentItem()
+    subjectHierarchy = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+
+    # Get the MRML node associated with the current item
+    inputNode = subjectHierarchy.GetItemDataNode(currentItemId)
+
+    if inputNode is not None:
+        # Do something with the node
+        print("Node name:", inputNode.GetName())
+    else:
+        print("No associated node found for the current item")
+
+    self.logic.inputNode = inputNode
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     owner = shNode.GetItemOwnerPluginName(currentItemId) if currentItemId else ""
     self.ui.exportButton.enabled = (owner == "Folder" or owner == "Segmentations")
@@ -80,7 +101,7 @@ class OpenAnatomyExportWidget(ScriptedLoadableModuleWidget):
     self.ui.outputModelHierarchyLabel.visible = (currentFormat == "scene")
     self.ui.outputFileFolderSelector.visible = (currentFormat != "scene")
 
-    self.ui.imageExportButton.enabled = self.ui.imageInputSelector.currentNode()
+    self.ui.imageExportButton.enabled = True
 
   def onExportButton(self):
     slicer.app.setOverrideCursor(qt.Qt.WaitCursor)
@@ -134,6 +155,8 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
   Uses ScriptedLoadableModuleLogic base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
+  
+  
 
   def __init__(self):
     ScriptedLoadableModuleLogic.__init__(self)
@@ -148,7 +171,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     # change seems to be working well.
     self.saturationBoost = 1.5
     self.brightnessBoost = 1.0
-
+    self.inputNode = None
     self._outputShFolderItemId = None
     self._numberOfExpectedModels = 0
     self._numberOfProcessedModels = 0
@@ -175,15 +198,85 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     return True
 
 
+  def exportAllSegmentsToUSD(self, segmentationNode, fileName, outputFolder):
+
+    import slicer
+    slicer.util.pip_install("usd-core")
+    from pxr import Usd, UsdGeom
+    import vtk
+    
+    if not segmentationNode:
+      logging.debug('exportAllSegmentsToUSD failed: no input node defined')
+      return False
+
+    # Create an append filter to combine all meshes
+    append_filter = vtk.vtkAppendPolyData()
+
+    # Iterate through each segment and append its polyData
+    segment_ids = vtk.vtkStringArray()
+    segmentationNode.GetSegmentation().GetSegmentIDs(segment_ids)
+    for i in range(segment_ids.GetNumberOfValues()):
+        segment_id = segment_ids.GetValue(i)
+        polyData = vtk.vtkPolyData()
+        segmentationNode.GetClosedSurfaceRepresentation(segment_id, polyData)
+        append_filter.AddInputData(polyData)
+
+    # Combine all segments
+    append_filter.Update()
+
+    # Get the combined mesh
+    combined_polyData = append_filter.GetOutput()
+    points = combined_polyData.GetPoints()
+    triangles = combined_polyData.GetPolys()
+
+    output_file = outputFolder + "/" + fileName
+    print(output_file)
+
+    # Convert to USD format
+    stage = Usd.Stage.CreateNew(output_file)
+    mesh = UsdGeom.Mesh.Define(stage, '/CombinedMesh')
+
+    # Set vertices (points)
+    usd_points = []
+    for i in range(points.GetNumberOfPoints()):
+        p = points.GetPoint(i)
+        usd_points.append((p[0], p[1], p[2]))
+    mesh.CreatePointsAttr(usd_points)
+
+    # Set faces (triangles)
+    usd_faces = []
+    # Logic to convert slicer triangles to USD face format:
+    # This part needs to be implemented according to how your specific data is structured.
+    # ...
+
+    mesh.CreateFaceVertexCountsAttr(usd_faces)
+
+    # Save the USD file
+    stage.Save()
+
   def exportModel(self, inputItem, outputFolder=None, reductionFactor=None, outputFormat=None):
-    if outputFormat is None:
-      outputFormat = "glTF"
-    if reductionFactor is not None:
-      self.reductionFactor = reductionFactor
-    self._exportToFile = (outputFormat != "scene")
+
     if outputFolder is None:
       if self._exportToFile:
         raise ValueError("Output folder must be specified if output format is not 'scene'")
+    if outputFormat is None:
+      outputFormat = "glTF"
+    if outputFormat == "OpenUSD":
+      outputFormat = "USD"     
+      # Example usage - Export all segments to a single USD file
+      nodename = self.inputNode.GetName()
+      print(nodename)
+      segmentationNode = self.inputNode
+      if segmentationNode:
+        self.exportAllSegmentsToUSD(self.inputNode, 'combined_output.usd', outputFolder)
+        print("USD export successful.")
+      else:
+        print("Segmentation node not found.")
+      return
+      
+    if reductionFactor is not None:
+      self.reductionFactor = reductionFactor
+    self._exportToFile = (outputFormat != "scene")
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     inputName = shNode.GetItemName(inputItem)
@@ -236,11 +329,17 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         outputFilePath = outputFilePathBase + '.obj'
         exporter.SetFilePrefix(outputFilePathBase)
       else:
-        raise ValueError("Output format must be scene, glTF, or OBJ")
+        raise ValueError("Output format must be scene, glTF, OBJ or OpenUSD")
 
       self.addLog(f"Writing file {outputFilePath}...")
-      exporter.SetRenderWindow(self._renderWindow)
-      exporter.Write()
+      if not outputFormat == "OpenUSD":
+        exporter.SetRenderWindow(self._renderWindow)
+        exporter.Write()
+      else:
+        import sys
+        sys.path.append("{}/utils".format(slicer.mrmlScene.GetRootDirectory().strip("/")))
+        from export_usd import export_usd
+        export_usd()
 
       if outputFormat == "glTF":
 
