@@ -187,6 +187,8 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     inputName = shNode.GetItemName(inputItem)
+    # Remove characters from name that cannot be used in file names
+    inputName = slicer.app.ioManager().forceFileNameValidCharacters(inputName)
 
     # Get input as a subject hierarchy folder
     owner = shNode.GetItemOwnerPluginName(inputItem)
@@ -366,6 +368,8 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
 
       shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
       folderName = shNode.GetItemName(shFolderItemId)
+      # Remove characters from name that cannot be used in file names
+      folderName = slicer.app.ioManager().forceFileNameValidCharacters(folderName)
       self.addLog(f"Writing {folderName}...")
 
       # Write all children of this item (recursively)
