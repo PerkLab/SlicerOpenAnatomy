@@ -508,18 +508,19 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       normalArray.SetName("NORMAL")
     outputModelNode.SetAndObservePolyData(outputPolyData)
 
-    ras2lps = vtk.vtkMatrix4x4()
-    ras2lps.SetElement(0,0,-1)
-    ras2lps.SetElement(1,1,-1)
-    ras2lpsTransform = vtk.vtkTransform()
-    ras2lpsTransform.SetMatrix(ras2lps)
-    transformer = vtk.vtkTransformPolyDataFilter()
-    transformer.SetTransform(ras2lpsTransform)
-    transformer.SetInputConnection(outputModelNode.GetPolyDataConnection())
+    transformOutputModelToWorldRAS = vtk.vtkGeneralTransform()
+    transformOutputModelToWorldRAS.PostMultiply()
+    slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(inputModelNode.GetParentTransformNode(), None, transformOutputModelToWorldRAS)
+    
+    transformOutputModelToWorldLPS = transformOutputModelToWorldRAS
+    transformOutputModelToWorldLPS.Scale(-1.0, -1.0, 1.0) #ras2lpsTransform
+    transformToWorldFilter = vtk.vtkTransformPolyDataFilter()
+    transformToWorldFilter.SetTransform(transformOutputModelToWorldLPS)
+    transformToWorldFilter.SetInputData(outputPolyData)
 
     actor = vtk.vtkActor()
     mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputConnection(transformer.GetOutputPort())
+    mapper.SetInputConnection(transformToWorldFilter.GetOutputPort())
     actor.SetMapper(mapper)
     displayNode = outputModelNode.GetDisplayNode()
 
