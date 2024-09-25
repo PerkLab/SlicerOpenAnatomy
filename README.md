@@ -15,12 +15,12 @@ Slicer Open Anatomy extension provides tools for loading, manipulating, exportin
 
 ## Modules
 ### [OpenAnatomy Export](OpenAnatomyExport/README.md)    
-This module exports a model hierarchy or segmentation node from 3D Slicer into a single glTF or OBJ file, including all the model colors and opacities; and for glTF also model hierarchy and model names.
+This module exports a model hierarchy or segmentation node from 3D Slicer into a single glTF or OBJ file, including all the model colors and opacities; and for glTF also model hierarchy and model names. [More details...](OpenAnatomyExport/README.md)
   
 ![OpenAnatomy Exporter module screenshot](OpenAnatomyExport/img/Screenshot03.png)
 
 ### [AtlasEditor](AtlasEditor/README.md)  
-This module is for editing and simplifying Open Anatomy's atlases. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study using a hierarchy JSON schema.
+This module is for editing and simplifying Open Anatomy's atlases. Users can select and organize the structures/labels into groups that is most relevant to their particular field or area of study using a hierarchy JSON schema. [More details...](AtlasEditor/README.md)
   
 ![AtlasEditor module screenshot](AtlasEditor/img/merge-cerebellum.png)
 
