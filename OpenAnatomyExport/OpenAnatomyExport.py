@@ -141,14 +141,6 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     self._exportToFile = True  # Save to files or just to the scene, normally on, maybe useful to turn off for debugging
     self.reductionFactor = 0.9
 
-    # Slicer uses Gouraud lighting model by default, while glTF requires PBR.
-    # Material properties conversion in VTK makes the model appear in glTF very dull, faded out,
-    # therefore if we export models with Gouraud lighting we adjust the saturation and brightness.
-    # By testing on a few anatomical atlases, saturation increase by 1.5x and no brightness
-    # change seems to be working well.
-    self.saturationBoost = 1.5
-    self.brightnessBoost = 1.0
-
     self._outputShFolderItemId = None
     self._numberOfExpectedModels = 0
     self._numberOfProcessedModels = 0
@@ -218,8 +210,14 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     self._gltfNodes = []
     self._gltfMeshes = []
 
+    # Blender's OBJ importer assumes that colors are in linear RGB color space, therefore
+    # we need to convert from sRGB to linear RGB. This is a bug in Blender (https://projects.blender.org/blender/blender/issues/43025)
+    # that they will never fix to preserve backward compatibility. We offer this special option to make it easier to pass models to Blender
+    # in OBJ format with correct colors.
+    # Note that glTF format expects linear RGB colors, therefore in that case we always convert to linear RGB.
+    outputLinearRGB = (outputFormat == "glTF") or (("OBJ" in outputFormat) and ("Blender" in outputFormat))
     # Add models to a self._renderer
-    self.addModelsToRenderer(inputShFolderItemId, boostGouraudColor = (outputFormat == "glTF"))
+    self.addModelsToRenderer(inputShFolderItemId, outputLinearRGB)
 
     if self._exportToFile:
       outputFileName = inputName
@@ -227,6 +225,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       # dateTimeStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
       # outputFileName += dateTimeStr
       outputFilePathBase = os.path.join(outputFolder, outputFileName)
+
       if outputFormat == "glTF":
         exporter = vtk.vtkGLTFExporter()
         outputFilePath = outputFilePathBase+'.gltf'
@@ -237,6 +236,11 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         exporter = vtk.vtkOBJExporter()
         outputFilePath = outputFilePathBase + '.obj'
         exporter.SetFilePrefix(outputFilePathBase)
+      elif ("OBJ" in outputFormat) and ("Blender" in outputFormat):
+        exporter = vtk.vtkOBJExporter()
+        outputFilePath = outputFilePathBase + '.obj'
+        exporter.SetFilePrefix(outputFilePathBase)
+        forceLinearRGB = True
       else:
         raise ValueError("Output format must be scene, glTF, or OBJ")
 
@@ -350,7 +354,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     writer.Write()
 
 
-  def addModelsToRenderer(self, shFolderItemId, boostGouraudColor=False):
+  def addModelsToRenderer(self, shFolderItemId, outputLinearRGB=False):
     if not shFolderItemId:
       raise ValueError("Subject hierarchy folder does not exist.")
 
@@ -403,7 +407,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
             if self._exportToFile:
               self._temporaryExportNodes.append(outputModelNode)
 
-          if self.addModelToRenderer(inputModelNode, outputModelNode, boostGouraudColor):
+          if self.addModelToRenderer(inputModelNode, outputModelNode, outputLinearRGB):
 
             # Convert atlas model names (such as 'Model_505_left_lateral_geniculate_body') to simple names
             # by stripping the prefix and converting underscore to space.
@@ -424,7 +428,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
         grandChildIds = vtk.vtkIdList()
         shNode.GetItemChildren(shItemId, grandChildIds)
         if grandChildIds.GetNumberOfIds() > 0:
-          self.addModelsToRenderer(shItemId, boostGouraudColor)
+          self.addModelsToRenderer(shItemId, outputLinearRGB)
           # added highest-level parent folder is the last node
           gltfFolderNodeIndex = len(self._gltfNodes)-1
           gltfFolderNodeChildren.append(gltfFolderNodeIndex)
@@ -436,7 +440,7 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
       slicer.app.resumeRender()
 
 
-  def addModelToRenderer(self, inputModelNode, outputModelNode, boostGouraudColor=False):
+  def addModelToRenderer(self, inputModelNode, outputModelNode, outputLinearRGB=False):
     '''Update output model in the scene and if valid add to self._renderer.
     :return: True if an actor is added to the renderer.
     '''
@@ -523,22 +527,48 @@ class OpenAnatomyExportLogic(ScriptedLoadableModuleLogic):
     actor.SetMapper(mapper)
     displayNode = outputModelNode.GetDisplayNode()
 
+
+    # Helper function for color conversion according to IEC 61966-2-1 standard.
+    # vtk.vtkMath.RGBToXYZ(colorRGB, outputRGB) performs the same gamma correction but then it also
+    # converts to CIE XYZ color space, which we do not want.
+
+    def srgb_to_linear(c):
+      if c <= 0.04045:
+          return c / 12.92
+      return ((c + 0.055) / 1.055) ** 2.4
+
+    def linear_to_srgb(c):
+        if c <= 0.0031308:
+            return 12.92 * c
+        else:
+            return 1.055 * (c ** (1/2.4)) - 0.055
+
+
+
     colorRGB = displayNode.GetColor()
     if displayNode.GetInterpolation() == slicer.vtkMRMLDisplayNode.PBRInterpolation:
-      actor.GetProperty().SetColor(colorRGB[0], colorRGB[1], colorRGB[2])
+      # colorRGB is in linear RGB
+      if outputLinearRGB:
+        # outputRGB is also in linear RGB
+        outputRGB = colorRGB
+      else:
+        # outputRGB is in sRGB, conversion is needed
+        outputRGB = [linear_to_srgb(colorRGB[0]), linear_to_srgb(colorRGB[1]), linear_to_srgb(colorRGB[2])]
+
+      actor.GetProperty().SetColor(outputRGB)
       actor.GetProperty().SetInterpolationToPBR()
       actor.GetProperty().SetMetallic(displayNode.GetMetallic())
       actor.GetProperty().SetRoughness(displayNode.GetRoughness())
     else:
-      if boostGouraudColor:
-        bf = colorRGB
-        colorHSV = [0, 0, 0]
-        vtk.vtkMath.RGBToHSV(colorRGB, colorHSV)
-        colorHSV[1] = min(colorHSV[1] * self.saturationBoost, 1.0)  # increase saturation
-        colorHSV[2] = min(colorHSV[2] * self.brightnessBoost, 1.0)  # increase brightness
-        colorRGB = [0, 0, 0]
-        vtk.vtkMath.HSVToRGB(colorHSV, colorRGB)
-      actor.GetProperty().SetColor(colorRGB[0], colorRGB[1], colorRGB[2])
+      # colorRGB is in sRGB
+      if outputLinearRGB:
+        # outputRGB is in linear RGB, conversion is needed
+        outputRGB = [srgb_to_linear(colorRGB[0]), srgb_to_linear(colorRGB[1]), srgb_to_linear(colorRGB[2])]
+      else:
+        # outputRGB is also in sRGB
+        outputRGB = colorRGB
+
+      actor.GetProperty().SetColor(outputRGB)
       actor.GetProperty().SetInterpolationToGouraud()
       actor.GetProperty().SetAmbient(displayNode.GetAmbient())
       actor.GetProperty().SetDiffuse(displayNode.GetDiffuse())

@@ -89,6 +89,11 @@
         </item>
         <item>
          <property name="text">
+          <string>OBJ for Blender (linear RGB)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
           <string>scene</string>
          </property>
         </item>
